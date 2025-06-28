@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Family Quiz Game</title>
+  <link rel="stylesheet" href="index.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
+</head>
+<body data-font-size="normal">
+<div class="container">
+  <div class="header">
+    <h1>🧠 Family Quiz Game</h1>
+    <p>Test your knowledge and have fun together!</p>
+
+    <!-- Font Size Controls -->
+    <div class="font-controls">
+      <span style="color: rgba(255,255,255,0.9); margin-right: 10px;">📺 View Size:</span>
+      <button class="btn btn-font" onclick="setFontSize('small')" title="Normal Size">A</button>
+      <button class="btn btn-font" onclick="setFontSize('normal')" title="Large Size">A+</button>
+      <button class="btn btn-font" onclick="setFontSize('large')" title="Extra Large">A++</button>
+      <button class="btn btn-font" onclick="setFontSize('xlarge')" title="TV Mode">📺</button>
+    </div>
+  </div>
+
+  <!-- Navigation -->
+  <div class="nav-buttons">
+    <button class="btn" onclick="showPanel('welcome')">🏠 Home</button>
+    <button class="btn btn-secondary" onclick="showPanel('admin')">⚙️ Admin</button>
+    <button class="btn btn-secondary" onclick="showPanel('game')">🎮 Play Game</button>
+    <button class="btn btn-secondary" onclick="showPanel('music')">🎵 Music Quiz</button>
+  </div>
+
+  <!-- Welcome Panel -->
+  <div id="welcome-panel" class="panel">
+    <h2>Welcome to Family Quiz Game! 🎉</h2>
+    <p style="margin: 20px 0; font-size: 1.1rem; line-height: 1.6;">
+      Create custom quiz questions for your family and friends. Add multiple choice questions,
+      picture questions, and open-ended questions. Each question will be displayed for 1 minute
+      during gameplay. Plus, enjoy our new Music Quiz feature - just select your music folder
+      and test your knowledge with random audio clips!
+    </p>
+
+    <div class="admin-stats">
+      <h3>Current Quiz Status</h3>
+      <p><strong>Total Questions:</strong> <span id="total-questions">0</span></p>
+      <p><strong>Questions per Game:</strong> <span id="questions-per-game">10</span></p>
+    </div>
+
+    <div style="text-align: center; margin-top: 30px;">
+      <button class="btn btn-secondary" onclick="showPanel('admin')" style="margin-right: 15px;">
+        ➕ Add Questions
+      </button>
+      <button class="btn" onclick="startGame()" style="margin-right: 15px;">
+        🚀 Start Quiz
+      </button>
+      <button class="btn" onclick="showPanel('music')" style="background: #9C27B0;">
+        🎵 Music Quiz
+      </button>
+    </div>
+  </div>
+
+  <!-- Admin Panel -->
+  <div id="admin-panel" class="panel hidden">
+    <h2>Admin Panel</h2>
+
+    <div class="settings-grid">
+      <div class="form-group">
+        <label for="questions-count">Questions per Game:</label>
+        <input type="number" id="questions-count" value="10" min="1" max="50" onchange="updateGameSettings()">
+      </div>
+    </div>
+
+    <h3 style="margin: 30px 0 20px 0;">Add New Question</h3>
+
+    <div class="form-group">
+      <label for="question-type">Question Type:</label>
+      <select id="question-type" onchange="updateQuestionForm()">
+        <option value="multiple-choice">Multiple Choice</option>
+        <option value="picture">Picture Question</option>
+        <option value="open-ended">Open-ended (No Options)</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="question-text">Question:</label>
+      <textarea id="question-text" rows="3" placeholder="Enter your question here..."></textarea>
+    </div>
+
+    <div id="picture-upload" class="form-group hidden">
+      <label for="question-image">Upload Picture:</label>
+      <input type="file" id="question-image" accept="image/*" class="file-input" onchange="previewImage()">
+      <img id="image-preview" class="preview-image hidden">
+    </div>
+
+    <div id="options-section">
+      <div class="form-group">
+        <label>Answer Options:</label>
+        <div class="options-container">
+          <div class="option-input">
+            <input type="radio" name="correct-answer" value="0" id="option-0-radio">
+            <input type="text" id="option-0" placeholder="Option A">
+          </div>
+          <div class="option-input">
+            <input type="radio" name="correct-answer" value="1" id="option-1-radio">
+            <input type="text" id="option-1" placeholder="Option B">
+          </div>
+          <div class="option-input">
+            <input type="radio" name="correct-answer" value="2" id="option-2-radio">
+            <input type="text" id="option-2" placeholder="Option C">
+          </div>
+          <div class="option-input">
+            <input type="radio" name="correct-answer" value="3" id="option-3-radio">
+            <input type="text" id="option-3" placeholder="Option D">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group" style="text-align: center;">
+      <button class="btn" onclick="addQuestion()">➕ Add Question</button>
+      <button class="btn btn-danger" onclick="clearAllQuestions()" style="margin-left: 15px;">🗑️ Clear All Questions</button>
+    </div>
+
+    <div class="import-export-section">
+      <h3>📁 Save & Load Questions</h3>
+      <div style="margin: 15px 0;">
+        <button class="btn btn-secondary" onclick="exportQuestions()">💾 Export Questions</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()" style="margin-left: 15px;">📂 Import Questions</button>
+        <input type="file" id="import-file" accept=".json" style="display: none;" onchange="importQuestions(event)">
+      </div>
+      <p style="font-size: 0.9rem; color: #666; margin-top: 10px;">
+        📤 <strong>Export:</strong> Download all questions with images as a JSON file<br>
+        📥 <strong>Import:</strong> Load questions from a previously saved JSON file<br>
+        🖼️ Images are automatically saved and restored with questions
+      </p>
+    </div>
+
+    <div id="questions-list" style="margin-top: 30px;"></div>
+  </div>
+
+  <!-- Game Panel -->
+  <div id="game-panel" class="panel hidden">
+    <div class="question-counter">
+      Question <span id="current-question-num">1</span> of <span id="total-game-questions">10</span>
+    </div>
+
+    <div class="progress-bar">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+
+    <div class="timer" id="timer">60</div>
+
+    <div class="question-container">
+      <div class="question-text" id="game-question-text"></div>
+      <img id="game-question-image" class="question-image hidden">
+      <div id="game-answer-options" class="answer-options"></div>
+      <textarea id="game-text-answer" class="text-answer hidden" placeholder="Enter your answer here..."></textarea>
+    </div>
+
+    <div style="text-align: center; margin-top: 30px;">
+      <button class="btn" id="next-question-btn" onclick="nextQuestion()">Next Question ➡️</button>
+      <button class="btn btn-secondary" onclick="skipQuestion()" style="margin-left: 15px;">Skip ⏭️</button>
+    </div>
+  </div>
+
+  <!-- Results Panel -->
+  <div id="results-panel" class="panel hidden">
+    <h2>🎉 Game Results</h2>
+    <div id="results-summary" style="text-align: center; margin: 20px 0; font-size: 1.2rem;"></div>
+    <div id="results-container" class="results-container"></div>
+    <div style="text-align: center; margin-top: 30px;">
+      <button class="btn" onclick="startGame()">🔄 Play Again</button>
+      <button class="btn btn-secondary" onclick="showPanel('welcome')" style="margin-left: 15px;">🏠 Home</button>
+    </div>
+  </div>
+
+  <!-- Music Quiz Panel -->
+  <div id="music-panel" class="panel hidden">
+    <h2>🎵 Music Quiz</h2>
+
+    <!-- Upload Section -->
+    <div id="music-upload-section" class="music-section">
+      <h3>📁 Load Music Folder</h3>
+      <div class="upload-area">
+        <input type="file" id="music-folder" webkitdirectory directory multiple style="display: none;" onchange="loadMusicFolder(event)">
+        <button class="btn btn-secondary" onclick="document.getElementById('music-folder').click()">
+          📂 Select Music Folder
+        </button>
+        <p class="upload-info">Select a folder containing your MP3 files<br>
+          <small>💡 This will load all MP3 files from the selected folder and subfolders</small></p>
+        <div id="music-file-list" class="file-list"></div>
+
+        <!-- Fallback for manual file selection -->
+        <div class="fallback-section">
+          <hr style="margin: 20px 0;">
+          <p style="color: #666; font-size: 0.9rem;">Alternative: Select multiple files manually</p>
+          <input type="file" id="music-files-manual" multiple accept=".mp3,audio/mpeg" style="display: none;" onchange="loadMusicFiles(event)">
+          <button class="btn btn-secondary btn-small" onclick="document.getElementById('music-files-manual').click()">
+            📄 Select Individual Files
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Game Setup -->
+    <div id="music-setup-section" class="music-section hidden">
+      <h3>⚙️ Quiz Settings</h3>
+      <div class="settings-grid">
+        <div class="form-group">
+          <label for="songs-count">Number of Songs:</label>
+          <select id="songs-count">
+            <option value="5">5 Songs</option>
+            <option value="10" selected>10 Songs</option>
+            <option value="15">15 Songs</option>
+            <option value="20">20 Songs</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="clip-duration">Clip Duration:</label>
+          <select id="clip-duration">
+            <option value="15">15 seconds</option>
+            <option value="20" selected>20 seconds</option>
+            <option value="30">30 seconds</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="autoplay-next" checked>
+            <span class="checkmark"></span>
+            🎵 Autoplay Next Song
+          </label>
+          <small class="setting-description">Automatically advance to next song when clip ends</small>
+        </div>
+      </div>
+      <div style="text-align: center; margin-top: 20px;">
+        <button class="btn" onclick="startMusicQuiz()">🎵 Start Music Quiz</button>
+      </div>
+    </div>
+
+    <!-- Music Game -->
+    <div id="music-game-section" class="music-section hidden">
+      <div class="question-counter">
+        Song <span id="current-song-num">1</span> of <span id="total-songs">10</span>
+      </div>
+
+      <div class="progress-bar">
+        <div class="progress-fill" id="music-progress-fill"></div>
+      </div>
+
+      <div class="music-player">
+        <div class="song-info">
+          <h3>🎵 Listen to this clip and guess the song!</h3>
+          <div class="audio-controls">
+            <audio id="music-audio" controls></audio>
+            <div class="playback-timer">
+              <span id="audio-timer">0:00 / 0:20</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="guess-section">
+          <div class="form-group">
+            <label for="song-guess">Your Guess:</label>
+            <input type="text" id="song-guess" placeholder="Enter song title or artist..." maxlength="100">
+          </div>
+
+          <div class="music-controls">
+            <button class="btn" onclick="handleMusicSubmit()">✅ Submit Guess</button>
+            <button class="btn btn-secondary" onclick="replayClip()" style="margin-left: 10px;">🔄 Replay</button>
+            <button class="btn btn-secondary" onclick="skipSong()" style="margin-left: 10px;">⏭️ Skip</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Music Results -->
+    <div id="music-results-section" class="music-section hidden">
+      <h3>🎉 Music Quiz Results</h3>
+      <div id="music-results-summary" style="text-align: center; margin: 20px 0; font-size: 1.2rem;"></div>
+      <div id="music-results-container" class="results-container"></div>
+      <div style="text-align: center; margin-top: 30px;">
+        <button class="btn quick-play" onclick="quickPlayAgain()" style="margin-right: 10px;">🎵 Quick Play Again</button>
+        <button class="btn btn-secondary" onclick="restartMusicQuiz()" style="margin-right: 10px;">⚙️ Change Settings</button>
+        <button class="btn btn-secondary" onclick="initializeMusicQuiz()" style="margin-right: 10px;">📁 New Music Folder</button>
+        <button class="btn btn-secondary" onclick="showPanel('welcome')">🏠 Home</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Notification system -->
+<div id="notification" class="notification"></div>
+
+<script src="index.js"></script>
+</body>
+</html>
