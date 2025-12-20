@@ -143,23 +143,27 @@ function getWrongAnswers(correctSong, allSongs, count, songIndex) {
 }
 
 /**
- * Generate multiplayer Kahoot options (same logic, different storage)
- * @param {Object} correctSong
- * @param {Array} allSongs
+ * Generate multiplayer Kahoot options (generated just before each song plays)
+ * @param {Object} correctSong - The current song being played
+ * @param {Array} selectedSongs - Songs selected for this game (to find current song index)
+ * @param {Array} allMusicFiles - All music files for wrong options pool (maintains randomness)
  * @returns {{options: Array, correctIndex: number}}
  */
-export function generateMultiplayerKahootOptions(correctSong, allSongs) {
+export function generateMultiplayerKahootOptions(correctSong, selectedSongs, allMusicFiles = null) {
   const options = [];
 
   // Use only the title from metadata
   const correctAnswer = getSongTitle(correctSong);
   options.push({ text: correctAnswer, isCorrect: true });
 
+  // Use all music files for wrong options if provided, otherwise fall back to selected songs
+  const wrongOptionsPool = allMusicFiles && allMusicFiles.length > 0 ? allMusicFiles : selectedSongs;
+
   const wrongAnswers = getWrongAnswers(
     correctSong,
-    allSongs,
+    wrongOptionsPool,
     3,
-    allSongs.indexOf(correctSong)
+    -1 // Use -1 since we're filtering by title, not index
   );
   wrongAnswers.forEach((answer) => {
     options.push({ text: answer, isCorrect: false });

@@ -426,9 +426,8 @@ function attemptRejoinGame(reconnectData) {
  * @param {string} hostName
  * @param {Object} settings
  * @param {Array} songsMetadata
- * @param {Array} kahootOptions
  */
-export function createGame(hostName, settings, songsMetadata, kahootOptions) {
+export function createGame(hostName, settings, songsMetadata) {
   if (!socket || !socket.connected) {
     showNotification('Not connected to server', 'error');
     return;
@@ -438,7 +437,6 @@ export function createGame(hostName, settings, songsMetadata, kahootOptions) {
     hostName,
     settings,
     songsMetadata,
-    kahootOptions,
   });
 }
 

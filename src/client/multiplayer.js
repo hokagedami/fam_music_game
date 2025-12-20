@@ -37,7 +37,6 @@ import {
 } from './audio.js';
 import {
   generateMultiplayerKahootOptions,
-  preGenerateAllKahootOptions,
   resetPlayerViewForNextSong,
   selectKahootOptionMultiplayer,
 } from './kahoot.js';
@@ -181,8 +180,8 @@ async function proceedWithGameCreation(hostName) {
   const shuffledSongs = shuffleArray([...state.musicFiles]);
   const selectedSongs = shuffledSongs.slice(0, Math.min(songsCount, shuffledSongs.length));
 
-  // Pre-generate Kahoot options using ALL music files for wrong options (not just selected songs)
-  const kahootOptions = preGenerateAllKahootOptions(selectedSongs, state.musicFiles);
+  // Options are now generated just before each song plays (in hostShowOptions)
+  // This maintains randomness and uses all music files for wrong options
 
   // Use local files - no upload needed!
   // Songs are played locally on host's device only (Kahoot-style)
@@ -201,8 +200,7 @@ async function proceedWithGameCreation(hostName) {
       answerTime,
       maxPlayers,
     },
-    songsMetadata,
-    kahootOptions
+    songsMetadata
   );
 
   state.setMusicQuizSongs(selectedSongs);
@@ -399,7 +397,8 @@ export function hostShowOptions() {
   state.setOptionsSentForCurrentSong(true);
 
   const song = state.musicQuizSongs[state.currentSongIndex];
-  const { options, correctIndex } = generateMultiplayerKahootOptions(song, state.musicQuizSongs);
+  // Generate options just before showing - uses all music files for wrong options pool
+  const { options, correctIndex } = generateMultiplayerKahootOptions(song, state.musicQuizSongs, state.musicFiles);
 
   // Store for later reveal
   state.setMultiplayerKahootOptions(options);
