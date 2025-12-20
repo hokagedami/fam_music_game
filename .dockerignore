@@ -1,0 +1,66 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Audio files (will be mounted as volume)
+audio/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation (not needed in container)
+README.md
+features.txt
+LICENSE*
+
+# Old/archived files
+old/
+not-needed/
+
+# Docker files (avoid recursive builds)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Environment files
+.env
+.env.*
+*.env
+
+# Logs
+logs/
+*.log
+
+# Test files
+test/
+tests/
+*.test.js
+*.spec.js
+coverage/
+
+# Playwright
+playwright-report/
+test-results/
+playwright/.cache/
+
+# Build artifacts
+dist/
+build/
+
+# Temporary files
+tmp/
+temp/
+*.tmp

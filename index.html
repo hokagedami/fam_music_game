@@ -3,295 +3,573 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Family Quiz Game</title>
-  <link rel="stylesheet" href="index.css">
+  <title>Music Quiz Game</title>
+  <link rel="stylesheet" href="styles.css">
+  <!-- Socket.IO is bundled in the TypeScript client, no CDN needed -->
+  <!-- jsmediatags for audio metadata extraction -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
+  <!-- QRCode.js for game ID QR codes -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
-<body data-font-size="normal">
+<body>
 <div class="container">
   <div class="header">
-    <h1>🧠 Family Quiz Game</h1>
-    <p>Test your knowledge and have fun together!</p>
+    <h1 id="main-title">🎵 Music Quiz Game</h1>
+    <p id="main-subtitle">Test your music knowledge solo or with friends!</p>
+  </div>
 
-    <!-- Font Size Controls -->
-    <div class="font-controls">
-      <span style="color: rgba(255,255,255,0.9); margin-right: 10px;">📺 View Size:</span>
-      <button class="btn btn-font" onclick="setFontSize('small')" title="Normal Size">A</button>
-      <button class="btn btn-font" onclick="setFontSize('normal')" title="Large Size">A+</button>
-      <button class="btn btn-font" onclick="setFontSize('large')" title="Extra Large">A++</button>
-      <button class="btn btn-font" onclick="setFontSize('xlarge')" title="TV Mode">📺</button>
+  <!-- Game Status Bar -->
+  <div id="game-status" class="game-status-bar hidden">
+    <div class="status-info">
+      <span id="game-id-display">Game ID: </span>
+      <span id="player-role">Role: </span>
+      <span id="player-count">Players: </span>
+      <span id="connection-status">🔴 Offline</span>
+    </div>
+    <div>
+      <button id="share-btn" class="btn btn-secondary" onclick="copyGameId()" style="display: none;">📋 Copy ID</button>
+      <button id="leave-btn" class="btn btn-danger" onclick="leaveGame()" style="display: none;">🚪 Leave Game</button>
     </div>
   </div>
 
-  <!-- Navigation -->
-  <div class="nav-buttons">
-    <button class="btn" onclick="showPanel('welcome')">🏠 Home</button>
-    <button class="btn btn-secondary" onclick="showPanel('admin')">⚙️ Admin</button>
-    <button class="btn btn-secondary" onclick="showPanel('game')">🎮 Play Game</button>
-    <button class="btn btn-secondary" onclick="showPanel('music')">🎵 Music Quiz</button>
-  </div>
+  <!-- Home Panel -->
+  <div id="home-panel" class="panel">
+    <h2 id="home-welcome">Welcome to Music Quiz! 🎉</h2>
 
-  <!-- Welcome Panel -->
-  <div id="welcome-panel" class="panel">
-    <h2>Welcome to Family Quiz Game! 🎉</h2>
-    <p style="margin: 20px 0; font-size: 1.1rem; line-height: 1.6;">
-      Create custom quiz questions for your family and friends. Add multiple choice questions,
-      picture questions, and open-ended questions. Each question will be displayed for 1 minute
-      during gameplay. Plus, enjoy our new Music Quiz feature - just select your music folder
-      and test your knowledge with random audio clips!
-    </p>
-
-    <div class="admin-stats">
-      <h3>Current Quiz Status</h3>
-      <p><strong>Total Questions:</strong> <span id="total-questions">0</span></p>
-      <p><strong>Questions per Game:</strong> <span id="questions-per-game">10</span></p>
-    </div>
-
-    <div style="text-align: center; margin-top: 30px;">
-      <button class="btn btn-secondary" onclick="showPanel('admin')" style="margin-right: 15px;">
-        ➕ Add Questions
-      </button>
-      <button class="btn" onclick="startGame()" style="margin-right: 15px;">
-        🚀 Start Quiz
-      </button>
-      <button class="btn" onclick="showPanel('music')" style="background: #9C27B0;">
-        🎵 Music Quiz
-      </button>
-    </div>
-  </div>
-
-  <!-- Admin Panel -->
-  <div id="admin-panel" class="panel hidden">
-    <h2>Admin Panel</h2>
-
-    <div class="settings-grid">
-      <div class="form-group">
-        <label for="questions-count">Questions per Game:</label>
-        <input type="number" id="questions-count" value="10" min="1" max="50" onchange="updateGameSettings()">
-      </div>
-    </div>
-
-    <h3 style="margin: 30px 0 20px 0;">Add New Question</h3>
-
-    <div class="form-group">
-      <label for="question-type">Question Type:</label>
-      <select id="question-type" onchange="updateQuestionForm()">
-        <option value="multiple-choice">Multiple Choice</option>
-        <option value="picture">Picture Question</option>
-        <option value="open-ended">Open-ended (No Options)</option>
-      </select>
-    </div>
-
-    <div class="form-group">
-      <label for="question-text">Question:</label>
-      <textarea id="question-text" rows="3" placeholder="Enter your question here..."></textarea>
-    </div>
-
-    <div id="picture-upload" class="form-group hidden">
-      <label for="question-image">Upload Picture:</label>
-      <input type="file" id="question-image" accept="image/*" class="file-input" onchange="previewImage()">
-      <img id="image-preview" class="preview-image hidden">
-    </div>
-
-    <div id="options-section">
-      <div class="form-group">
-        <label>Answer Options:</label>
-        <div class="options-container">
-          <div class="option-input">
-            <input type="radio" name="correct-answer" value="0" id="option-0-radio">
-            <input type="text" id="option-0" placeholder="Option A">
-          </div>
-          <div class="option-input">
-            <input type="radio" name="correct-answer" value="1" id="option-1-radio">
-            <input type="text" id="option-1" placeholder="Option B">
-          </div>
-          <div class="option-input">
-            <input type="radio" name="correct-answer" value="2" id="option-2-radio">
-            <input type="text" id="option-2" placeholder="Option C">
-          </div>
-          <div class="option-input">
-            <input type="radio" name="correct-answer" value="3" id="option-3-radio">
-            <input type="text" id="option-3" placeholder="Option D">
-          </div>
+    <!-- Return to Active Game -->
+    <div id="return-to-game-section" class="return-to-game hidden">
+      <div class="return-to-game-content">
+        <h3 id="return-game-title">🎮 You're in an active game!</h3>
+        <p id="return-game-info">Game ID: <span id="return-game-id"></span></p>
+        <div class="panel-actions">
+          <button class="btn" onclick="returnToGame()">🔙 Return to Game</button>
+          <button class="btn btn-danger" onclick="leaveGame()">🚪 Leave Game</button>
         </div>
       </div>
     </div>
 
-    <div class="form-group" style="text-align: center;">
-      <button class="btn" onclick="addQuestion()">➕ Add Question</button>
-      <button class="btn btn-danger" onclick="clearAllQuestions()" style="margin-left: 15px;">🗑️ Clear All Questions</button>
+    <!-- Connection Status (only show if multiplayer is attempted) -->
+    <div class="connection-status" id="connection-section" style="display: none;">
+      <p id="detailed-connection-status">🔴 Not connected to server</p>
+      <button id="test-connection-btn" class="btn btn-secondary" onclick="testConnection()">🔧 Test Connection</button>
     </div>
 
-    <div class="import-export-section">
-      <h3>📁 Save & Load Questions</h3>
-      <div style="margin: 15px 0;">
-        <button class="btn btn-secondary" onclick="exportQuestions()">💾 Export Questions</button>
-        <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()" style="margin-left: 15px;">📂 Import Questions</button>
-        <input type="file" id="import-file" accept=".json" style="display: none;" onchange="importQuestions(event)">
+    <div id="connection-help" class="connection-status" style="display: none;">
+      <h3>🚀 Server Setup Required</h3>
+      <p>To enable multiplayer, start the server by running:</p>
+      <code>node server.js</code>
+      <p>Server should start on port 3001</p>
+    </div>
+
+    <!-- Game Mode Selection -->
+    <div class="game-modes">
+      <div class="option-card single-player">
+        <h3>🎯 Single Player</h3>
+        <p>Practice your music knowledge offline. Perfect for solo sessions and testing your skills!</p>
+        <button class="btn" onclick="startSinglePlayerMode()">🎵 Play Solo</button>
       </div>
-      <p style="font-size: 0.9rem; color: #666; margin-top: 10px;">
-        📤 <strong>Export:</strong> Download all questions with images as a JSON file<br>
-        📥 <strong>Import:</strong> Load questions from a previously saved JSON file<br>
-        🖼️ Images are automatically saved and restored with questions
-      </p>
+
+      <div class="option-card multiplayer">
+        <h3>🎮 Create Multiplayer Game</h3>
+        <p>Host a new music quiz game. Load your music collection and invite friends to join!</p>
+        <button class="btn" onclick="startMultiplayer()">🚀 Create Game</button>
+      </div>
+
+      <div class="option-card multiplayer">
+        <h3>👥 Join Multiplayer Game</h3>
+        <p>Join an existing game using a Game ID shared by the host.</p>
+        <button class="btn btn-secondary" onclick="showJoinGame()">🔗 Join Game</button>
+      </div>
     </div>
 
-    <div id="questions-list" style="margin-top: 30px;"></div>
-  </div>
-
-  <!-- Game Panel -->
-  <div id="game-panel" class="panel hidden">
-    <div class="question-counter">
-      Question <span id="current-question-num">1</span> of <span id="total-game-questions">10</span>
-    </div>
-
-    <div class="progress-bar">
-      <div class="progress-fill" id="progress-fill"></div>
-    </div>
-
-    <div class="timer" id="timer">60</div>
-
-    <div class="question-container">
-      <div class="question-text" id="game-question-text"></div>
-      <img id="game-question-image" class="question-image hidden">
-      <div id="game-answer-options" class="answer-options"></div>
-      <textarea id="game-text-answer" class="text-answer hidden" placeholder="Enter your answer here..."></textarea>
-    </div>
-
-    <div style="text-align: center; margin-top: 30px;">
-      <button class="btn" id="next-question-btn" onclick="nextQuestion()">Next Question ➡️</button>
-      <button class="btn btn-secondary" onclick="skipQuestion()" style="margin-left: 15px;">Skip ⏭️</button>
+    <div id="recent-games" style="display: none;">
+      <h3>🕒 Recent Games</h3>
+      <div id="recent-games-list"></div>
     </div>
   </div>
 
-  <!-- Results Panel -->
-  <div id="results-panel" class="panel hidden">
-    <h2>🎉 Game Results</h2>
-    <div id="results-summary" style="text-align: center; margin: 20px 0; font-size: 1.2rem;"></div>
-    <div id="results-container" class="results-container"></div>
-    <div style="text-align: center; margin-top: 30px;">
-      <button class="btn" onclick="startGame()">🔄 Play Again</button>
-      <button class="btn btn-secondary" onclick="showPanel('welcome')" style="margin-left: 15px;">🏠 Home</button>
-    </div>
-  </div>
+  <!-- Setup Panel (Single Player & Multiplayer Create) -->
+  <div id="setup-panel" class="panel hidden">
+    <h2 id="setup-title">🎵 Setup Your Game</h2>
 
-  <!-- Music Quiz Panel -->
-  <div id="music-panel" class="panel hidden">
-    <h2>🎵 Music Quiz</h2>
+    <!-- Hidden input for host name (always "Host") -->
+    <input type="hidden" id="player-name-input" value="Host">
 
-    <!-- Upload Section -->
-    <div id="music-upload-section" class="music-section">
-      <h3>📁 Load Music Folder</h3>
+    <!-- Music Upload Section -->
+    <div id="music-upload-section">
+      <h3>📁 Load Your Music Collection</h3>
       <div class="upload-area">
-        <input type="file" id="music-folder" webkitdirectory directory multiple style="display: none;" onchange="loadMusicFolder(event)">
+        <input type="file" id="music-folder" webkitdirectory directory multiple style="display: none;" onchange="loadMusic(event, 'folder')">
         <button class="btn btn-secondary" onclick="document.getElementById('music-folder').click()">
           📂 Select Music Folder
         </button>
-        <p class="upload-info">Select a folder containing your MP3 files<br>
-          <small>💡 This will load all MP3 files from the selected folder and subfolders</small></p>
-        <div id="music-file-list" class="file-list"></div>
+        <p>Select a folder containing your music files<br>
+          <small>💡 Supports MP3, WAV, M4A, and AAC files</small></p>
 
-        <!-- Fallback for manual file selection -->
-        <div class="fallback-section">
-          <hr style="margin: 20px 0;">
-          <p style="color: #666; font-size: 0.9rem;">Alternative: Select multiple files manually</p>
-          <input type="file" id="music-files-manual" multiple accept=".mp3,audio/mpeg" style="display: none;" onchange="loadMusicFiles(event)">
-          <button class="btn btn-secondary btn-small" onclick="document.getElementById('music-files-manual').click()">
+        <!-- Manual file selection fallback -->
+        <div style="margin-top: 15px;">
+          <input type="file" id="music-files" multiple accept=".mp3,.wav,.m4a,.aac,audio/*" style="display: none;" onchange="loadMusic(event, 'files')">
+          <button class="btn btn-secondary" onclick="document.getElementById('music-files').click()">
             📄 Select Individual Files
           </button>
         </div>
       </div>
+      <div id="music-file-list" class="file-list"></div>
     </div>
 
-    <!-- Game Setup -->
-    <div id="music-setup-section" class="music-section hidden">
-      <h3>⚙️ Quiz Settings</h3>
+    <!-- Game Settings -->
+    <div id="music-settings-section" class="hidden">
+      <h3>⚙️ Game Settings</h3>
       <div class="settings-grid">
         <div class="form-group">
           <label for="songs-count">Number of Songs:</label>
           <select id="songs-count">
+            <option value="1">1 Song (Quick)</option>
+            <option value="2">2 Songs</option>
+            <option value="3">3 Songs</option>
             <option value="5">5 Songs</option>
             <option value="10" selected>10 Songs</option>
             <option value="15">15 Songs</option>
             <option value="20">20 Songs</option>
+            <option value="30">30 Songs</option>
           </select>
         </div>
         <div class="form-group">
           <label for="clip-duration">Clip Duration:</label>
           <select id="clip-duration">
+            <option value="5">5 seconds</option>
+            <option value="10">10 seconds</option>
             <option value="15">15 seconds</option>
             <option value="20" selected>20 seconds</option>
             <option value="30">30 seconds</option>
+            <option value="45">45 seconds</option>
+          </select>
+        </div>
+        <div class="form-group" id="answer-time-group">
+          <label for="answer-time">Answer Time:</label>
+          <select id="answer-time">
+            <option value="5">5 seconds</option>
+            <option value="10">10 seconds</option>
+            <option value="15" selected>15 seconds</option>
+            <option value="20">20 seconds</option>
+            <option value="30">30 seconds</option>
+          </select>
+        </div>
+        <div class="form-group" id="max-players-group">
+          <label for="max-players">Max Players:</label>
+          <select id="max-players">
+            <option value="2">2 Players</option>
+            <option value="4">4 Players</option>
+            <option value="6" selected>6 Players</option>
+            <option value="8">8 Players</option>
+            <option value="10">10 Players</option>
+          </select>
+        </div>
+        <div class="form-group" id="difficulty-group" style="display: none;">
+          <label for="difficulty">Difficulty Level:</label>
+          <select id="difficulty">
+            <option value="easy">Easy (More time)</option>
+            <option value="normal" selected>Normal</option>
+            <option value="hard">Hard (Less time)</option>
+            <option value="expert">Expert (Very short clips)</option>
           </select>
         </div>
         <div class="form-group">
-          <label class="checkbox-label">
+          <label>
             <input type="checkbox" id="autoplay-next" checked>
-            <span class="checkmark"></span>
-            🎵 Autoplay Next Song
+            🎵 Auto-advance songs
           </label>
-          <small class="setting-description">Automatically advance to next song when clip ends</small>
+        </div>
+        <div class="form-group" id="single-player-options" style="display: none;">
+          <label>
+            <input type="checkbox" id="show-hints" checked>
+            💡 Show hints available
+          </label>
+        </div>
+        <div class="form-group" id="single-player-options-2" style="display: none;">
+          <label>
+            <input type="checkbox" id="shuffle-songs" checked>
+            🔀 Shuffle song order
+          </label>
         </div>
       </div>
-      <div style="text-align: center; margin-top: 20px;">
-        <button class="btn" onclick="startMusicQuiz()">🎵 Start Music Quiz</button>
+
+      <div class="panel-actions">
+        <button class="btn" id="start-game-button" onclick="startGame()">🎯 Start Game</button>
+        <button class="btn btn-secondary" onclick="showPanel('home')">🏠 Back</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Join Game Panel -->
+  <div id="join-panel" class="panel hidden">
+    <h2>👥 Join Music Quiz Game</h2>
+
+    <div class="form-group">
+      <label for="join-player-name">Your Name:</label>
+      <input type="text" id="join-player-name" placeholder="Enter your name" maxlength="20">
+    </div>
+
+    <div class="form-group">
+      <label for="game-id-input">Game ID:</label>
+      <input type="text" id="game-id-input" placeholder="Enter 6-character Game ID" maxlength="6" style="text-transform: uppercase;">
+    </div>
+
+    <div class="panel-actions">
+      <button class="btn" onclick="joinGame()">🔗 Join Game</button>
+      <button class="btn btn-secondary" onclick="showPanel('home')">🏠 Back</button>
+    </div>
+  </div>
+
+  <!-- Lobby Panel -->
+  <div id="lobby-panel" class="panel hidden">
+    <h2>🎮 Game Lobby</h2>
+
+    <div class="lobby-info">
+      <div class="game-details">
+        <h3>📋 Game Details</h3>
+        <p id="lobby-game-id">Game ID: </p>
+        <p id="lobby-settings">Settings: </p>
+        <div class="join-options">
+          <button class="btn btn-secondary" onclick="copyGameId()">📋 Copy Game ID</button>
+          <button class="btn btn-secondary" onclick="toggleQRCode()">📱 Show QR Code</button>
+        </div>
+        <!-- QR Code Container -->
+        <div id="qr-code-container" class="qr-code-container hidden">
+          <p class="qr-instruction">Scan to join game:</p>
+          <div id="qr-code"></div>
+          <p class="qr-url" id="qr-url-text"></p>
+        </div>
+      </div>
+
+      <div class="players-list">
+        <h3>👥 Players (<span id="current-player-count">0</span>/<span id="max-player-count">6</span>)</h3>
+        <div id="players-container"></div>
       </div>
     </div>
 
-    <!-- Music Game -->
-    <div id="music-game-section" class="music-section hidden">
+    <!-- Host Controls -->
+    <div id="host-controls" style="display: none;">
+      <div style="text-align: center; margin-top: 30px;">
+        <button id="start-game-btn" class="btn" onclick="startMultiplayerGame()" disabled>🚀 Start Game</button>
+      </div>
+    </div>
+
+    <!-- Player Controls -->
+    <div id="player-controls" style="display: none;">
+      <div style="text-align: center; margin-top: 30px; color: #666;">
+        <p>⏳ Waiting for host to start the game...</p>
+      </div>
+    </div>
+
+    <div style="text-align: center; margin-top: 20px;">
+      <button class="btn btn-danger" onclick="leaveGame()">🚪 Leave Game</button>
+    </div>
+  </div>
+
+  <!-- Game Panel -->
+  <div id="game-panel" class="panel hidden">
+    <div class="game-header">
       <div class="question-counter">
         Song <span id="current-song-num">1</span> of <span id="total-songs">10</span>
       </div>
+      <div class="score-display" id="single-player-score" style="display: none;">
+        Score: <span id="current-score">0</span> points
+      </div>
+    </div>
 
+    <div class="progress-container">
       <div class="progress-bar">
         <div class="progress-fill" id="music-progress-fill"></div>
       </div>
+      <div class="progress-text" id="progress-text" style="display: none;">
+        <span id="progress-percentage">0%</span> Complete
+      </div>
+    </div>
 
-      <div class="music-player">
-        <div class="song-info">
-          <h3>🎵 Listen to this clip and guess the song!</h3>
-          <div class="audio-controls">
-            <audio id="music-audio" controls></audio>
-            <div class="playback-timer">
-              <span id="audio-timer">0:00 / 0:20</span>
-            </div>
-          </div>
+    <!-- Single Player Controls -->
+    <div id="single-player-controls" class="music-player hidden">
+      <h3 id="single-song-title">🎵 Listen and Guess!</h3>
+
+      <div id="song-hints" class="song-hints hidden">
+        <p>💡 <strong>Album:</strong> <span id="hint-album">-</span></p>
+        <p>💡 <strong>Year:</strong> <span id="hint-year">-</span></p>
+      </div>
+
+      <div class="audio-controls">
+        <audio id="single-player-audio" controls controlsList="nodownload nofullscreen noremoteplayback" oncontextmenu="return false;"></audio>
+        <div id="single-audio-timer" class="audio-timer">0:00 / 0:20</div>
+      </div>
+
+      <!-- Kahoot-style Answer Options -->
+      <div id="single-kahoot-options" class="kahoot-options">
+        <div class="kahoot-option kahoot-red" data-option="0" onclick="selectKahootOption(this, 0)">
+          <div class="kahoot-shape">▲</div>
+          <div class="kahoot-answer" id="single-option-0">Loading...</div>
         </div>
+        <div class="kahoot-option kahoot-blue" data-option="1" onclick="selectKahootOption(this, 1)">
+          <div class="kahoot-shape">◆</div>
+          <div class="kahoot-answer" id="single-option-1">Loading...</div>
+        </div>
+        <div class="kahoot-option kahoot-yellow" data-option="2" onclick="selectKahootOption(this, 2)">
+          <div class="kahoot-shape">●</div>
+          <div class="kahoot-answer" id="single-option-2">Loading...</div>
+        </div>
+        <div class="kahoot-option kahoot-green" data-option="3" onclick="selectKahootOption(this, 3)">
+          <div class="kahoot-shape">■</div>
+          <div class="kahoot-answer" id="single-option-3">Loading...</div>
+        </div>
+      </div>
 
-        <div class="guess-section">
-          <div class="form-group">
-            <label for="song-guess">Your Guess:</label>
-            <input type="text" id="song-guess" placeholder="Enter song title or artist..." maxlength="100">
-          </div>
+      <div id="single-guess-feedback" class="guess-feedback hidden"></div>
 
-          <div class="music-controls">
-            <button class="btn" onclick="handleMusicSubmit()">✅ Submit Guess</button>
-            <button class="btn btn-secondary" onclick="replayClip()" style="margin-left: 10px;">🔄 Replay</button>
-            <button class="btn btn-secondary" onclick="skipSong()" style="margin-left: 10px;">⏭️ Skip</button>
-          </div>
+      <div class="game-controls">
+        <button class="btn btn-secondary" onclick="replaySingleClip()">🔄 Replay</button>
+        <button id="single-player-skip" class="btn btn-warning" onclick="skipSingleSong()">⏭️ Skip Song</button>
+      </div>
+
+      <div class="time-bonus" id="time-bonus" style="display: none;">
+        ⏱️ Time Bonus: <span id="bonus-points">+2</span> points available
+      </div>
+
+      <div class="game-info">
+        <div class="current-streak">
+          🔥 Current Streak: <span id="current-streak">0</span>
+        </div>
+        <div class="best-streak">
+          🏆 Best Streak: <span id="best-streak">0</span>
         </div>
       </div>
     </div>
 
-    <!-- Music Results -->
-    <div id="music-results-section" class="music-section hidden">
-      <h3>🎉 Music Quiz Results</h3>
-      <div id="music-results-summary" style="text-align: center; margin: 20px 0; font-size: 1.2rem;"></div>
-      <div id="music-results-container" class="results-container"></div>
-      <div style="text-align: center; margin-top: 30px;">
-        <button class="btn quick-play" onclick="quickPlayAgain()" style="margin-right: 10px;">🎵 Quick Play Again</button>
-        <button class="btn btn-secondary" onclick="restartMusicQuiz()" style="margin-right: 10px;">⚙️ Change Settings</button>
-        <button class="btn btn-secondary" onclick="initializeMusicQuiz()" style="margin-right: 10px;">📁 New Music Folder</button>
-        <button class="btn btn-secondary" onclick="showPanel('welcome')">🏠 Home</button>
+    <!-- Host Music Player (Multiplayer) - Host controls music, doesn't answer -->
+    <div id="host-music-player" style="display: none;">
+      <div class="music-player">
+        <h3>🎵 Now Playing - <span id="host-song-number">Song 1</span> of <span id="host-total-songs">3</span></h3>
+        <p class="host-instruction">Play the song for players. You don't answer - just control the music!</p>
+        <div class="audio-controls">
+          <audio id="host-audio-player" controls controlsList="nodownload nofullscreen noremoteplayback" oncontextmenu="return false;"></audio>
+          <div id="audio-timer">0:00 / 0:20</div>
+        </div>
+
+        <div id="host-waiting-status" class="host-status">
+          <p>⏳ Waiting for players to answer...</p>
+          <div id="players-answered-count">0 / 0 players answered</div>
+        </div>
+
+        <div class="game-controls" style="margin-top: 20px;">
+          <button class="btn btn-secondary" onclick="replayClip()">🔄 Replay</button>
+          <button id="show-options-btn" class="btn btn-warning" onclick="hostShowOptions()">🎯 Show Options to Players</button>
+          <!-- Answer reveals automatically after timer expires, no manual button needed -->
+        </div>
+
+        <div id="host-correct-answer" class="correct-answer-display hidden">
+          <h4>✅ Correct Answer:</h4>
+          <p id="correct-answer-text"></p>
+        </div>
       </div>
+    </div>
+
+    <!-- Non-Host Player (Multiplayer) - Waits for song, then sees options -->
+    <div id="non-host-music-player" style="display: none;">
+      <div class="music-player player-options-view">
+        <h3 id="player-song-status">🎵 Waiting for host to play song...</h3>
+
+        <!-- Waiting state - shown while host plays song -->
+        <div id="player-waiting-state" class="player-waiting">
+          <div class="waiting-animation">🎧</div>
+          <p class="player-instruction">Listen to the song playing...</p>
+        </div>
+
+        <!-- Kahoot-style Answer Options - hidden until song ends -->
+        <div id="nonhost-kahoot-options" class="kahoot-options" style="display: none;">
+          <div class="kahoot-option kahoot-red" data-option="0" onclick="selectKahootOptionMultiplayer(this, 0)">
+            <div class="kahoot-shape">▲</div>
+            <div class="kahoot-answer" id="nonhost-option-0">Option A</div>
+          </div>
+          <div class="kahoot-option kahoot-blue" data-option="1" onclick="selectKahootOptionMultiplayer(this, 1)">
+            <div class="kahoot-shape">◆</div>
+            <div class="kahoot-answer" id="nonhost-option-1">Option B</div>
+          </div>
+          <div class="kahoot-option kahoot-yellow" data-option="2" onclick="selectKahootOptionMultiplayer(this, 2)">
+            <div class="kahoot-shape">●</div>
+            <div class="kahoot-answer" id="nonhost-option-2">Option C</div>
+          </div>
+          <div class="kahoot-option kahoot-green" data-option="3" onclick="selectKahootOptionMultiplayer(this, 3)">
+            <div class="kahoot-shape">■</div>
+            <div class="kahoot-answer" id="nonhost-option-3">Option D</div>
+          </div>
+        </div>
+
+        <!-- Timer for answering -->
+        <div id="answer-timer" class="answer-timer hidden">
+          ⏱️ Time remaining: <span id="answer-time-left">10</span>s
+        </div>
+
+        <div id="player-answer-status" class="player-answer-status hidden">
+          <p>✓ Answer submitted! Waiting for results...</p>
+        </div>
+
+        <div id="player-result-display" class="player-result hidden">
+          <div id="player-result-icon"></div>
+          <p id="player-result-text"></p>
+          <p id="player-points-earned"></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Updates (Multiplayer) -->
+    <div class="live-updates" id="live-updates">
+      <h4>🔥 Live Updates</h4>
+      <div id="live-feed"></div>
+    </div>
+
+    <!-- Scores Button (Multiplayer) -->
+    <div id="scores-button-container" style="text-align: center; margin-top: 20px; display: none;">
+      <button class="btn btn-secondary" onclick="toggleScoreboard()">🏆 View Scores</button>
+    </div>
+  </div>
+
+  <!-- Results Panel -->
+  <div id="results-panel" class="panel hidden">
+    <h2 id="results-title">🎉 Game Results</h2>
+
+    <!-- Single Player Results -->
+    <div id="single-player-results" class="hidden">
+      <div class="final-score-container">
+        <div class="final-score-display">
+          <div class="score-number">
+            <span id="final-score">0</span>
+            <small>points</small>
+          </div>
+          <div class="score-grade" id="score-grade">🎵</div>
+        </div>
+
+        <div class="score-breakdown">
+          <div class="stat-item">
+            <div class="stat-number" id="correct-count">0</div>
+            <div class="stat-label">Correct</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number" id="partial-count">0</div>
+            <div class="stat-label">Partial</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number" id="wrong-count">0</div>
+            <div class="stat-label">Wrong</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number" id="accuracy-percentage">0%</div>
+            <div class="stat-label">Accuracy</div>
+          </div>
+        </div>
+
+        <div class="achievements" id="achievements">
+          <!-- Achievements will be populated by JavaScript -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Multiplayer Results -->
+    <div id="multiplayer-results">
+      <!-- Confetti Canvas -->
+      <canvas id="confetti-canvas"></canvas>
+
+      <!-- Kahoot-style Podium -->
+      <div id="podium-container" class="podium-container">
+        <div id="podium-2nd" class="podium-position podium-2nd">
+          <div class="podium-players"></div>
+          <div class="podium-block">
+            <span class="podium-medal">🥈</span>
+            <span class="podium-rank">2nd</span>
+          </div>
+        </div>
+        <div id="podium-1st" class="podium-position podium-1st">
+          <div class="podium-players"></div>
+          <div class="podium-block">
+            <span class="podium-medal">🥇</span>
+            <span class="podium-rank">1st</span>
+          </div>
+        </div>
+        <div id="podium-3rd" class="podium-position podium-3rd">
+          <div class="podium-players"></div>
+          <div class="podium-block">
+            <span class="podium-medal">🥉</span>
+            <span class="podium-rank">3rd</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Other Rankings (4th and below) -->
+      <div id="other-rankings" class="other-rankings"></div>
+    </div>
+
+    <!-- Songs Played List -->
+    <div id="songs-played-section" class="songs-played-section hidden">
+      <h3>🎵 Songs Played This Game</h3>
+      <div id="songs-played-list" class="songs-played-list"></div>
+    </div>
+
+    <!-- Detailed Results -->
+    <div id="detailed-results-container"></div>
+
+    <div class="results-actions">
+      <button id="play-again-btn" class="btn" onclick="playAgain()" style="display: none;">🔄 Play Again</button>
+      <button id="play-again-single-btn" class="btn hidden" onclick="playAgainSingle()">🔄 Play Again</button>
+      <button id="export-results-btn" class="btn btn-secondary hidden" onclick="exportResults()">📄 Export Results</button>
+      <button class="btn btn-secondary" onclick="showPanel('home')" style="margin-left: 15px;">🏠 Home</button>
     </div>
   </div>
 </div>
 
-<!-- Notification system -->
+<!-- Scoreboard Modal -->
+<div id="scoreboard-modal" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>🏆 Live Scoreboard</h3>
+      <button class="modal-close" onclick="closeScoreboard()">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="live-scoreboard"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Correct Answer Reveal (shown before scoreboard) -->
+<div id="correct-answer-reveal" class="correct-answer-overlay hidden">
+  <div class="correct-answer-container">
+    <div class="correct-answer-label">The correct answer is</div>
+    <div id="correct-answer-title" class="correct-answer-title"></div>
+  </div>
+</div>
+
+<!-- Intermediate Leaderboard (Kahoot-style between songs) -->
+<div id="intermediate-leaderboard" class="intermediate-leaderboard-overlay hidden">
+  <div class="intermediate-leaderboard-container">
+    <div class="leaderboard-header">
+      <h2>Scoreboard</h2>
+    </div>
+    <div id="intermediate-rankings" class="intermediate-rankings">
+      <!-- Rankings will be populated dynamically -->
+    </div>
+    <div class="leaderboard-footer">
+      <span class="next-song-hint">Next song starting soon...</span>
+    </div>
+  </div>
+</div>
+
+<!-- Notification -->
 <div id="notification" class="notification"></div>
 
-<script src="index.js"></script>
+<!-- Loading Overlay -->
+<div id="loading-overlay" class="loading-overlay hidden">
+  <div class="loading-content">
+    <div class="loading-spinner"></div>
+    <p id="loading-text">Loading...</p>
+  </div>
+</div>
+
+<!-- TypeScript client bundle -->
+<script src="/dist/client/bundle.js"></script>
 </body>
 </html>

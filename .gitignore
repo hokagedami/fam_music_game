@@ -142,5 +142,19 @@ dist
 .svelte-kit
 
 # End of https://www.toptal.com/developers/gitignore/api/node
+
+# Project specific
 audio/
+uploads/
 .idea/
+test-music/
+
+# Test artifacts
+test-results/
+playwright-report/
+
+# Build output
+dist/
+
+# Misc
+nul
