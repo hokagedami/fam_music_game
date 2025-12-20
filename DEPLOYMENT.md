@@ -1,11 +1,12 @@
 # Deployment Guide
 
-This guide covers deploying the Multiplayer Music Quiz Game to Namecheap shared hosting and Hetzner Linux VPS.
+This guide covers deploying the Multiplayer Music Quiz Game to DigitalOcean App Platform (recommended), Namecheap shared hosting, and Hetzner Linux VPS.
 
 ## Table of Contents
 
 - [Prerequisites](#prerequisites)
 - [Build for Production](#build-for-production)
+- [DigitalOcean App Platform (Recommended)](#digitalocean-app-platform-recommended)
 - [Namecheap Deployment](#namecheap-deployment)
 - [Hetzner VPS Deployment](#hetzner-vps-deployment)
 - [Environment Variables](#environment-variables)
@@ -51,6 +52,233 @@ npm run build
 # - styles.css
 # - package.json
 # - package-lock.json
+```
+
+---
+
+## DigitalOcean App Platform (Recommended)
+
+DigitalOcean App Platform provides a fully managed platform for deploying Node.js applications with automatic scaling, SSL, and CI/CD integration.
+
+### Why App Platform?
+
+- **Zero infrastructure management** - No server setup, patches, or maintenance
+- **Automatic SSL** - Free HTTPS certificates managed automatically
+- **Built-in CI/CD** - Auto-deploy on git push
+- **WebSocket support** - Full Socket.IO compatibility
+- **Horizontal scaling** - Scale containers with one click
+
+### Prerequisites
+
+- DigitalOcean account
+- GitHub repository with your code
+- Domain name (optional, free `.ondigitalocean.app` subdomain provided)
+
+### Deployment Steps
+
+#### 1. Prepare Your Repository
+
+Ensure your repository has these files:
+
+```
+├── src/
+│   ├── client/
+│   └── server/
+│       └── index.js
+├── index.html
+├── styles.css
+├── package.json
+├── package-lock.json
+└── .env.example
+```
+
+#### 2. Create the App
+
+1. Log into [DigitalOcean Cloud Console](https://cloud.digitalocean.com)
+2. Navigate to **Apps** → **Create App**
+3. Select **GitHub** as source
+4. Authorize DigitalOcean to access your repository
+5. Select your repository and branch (usually `main` or `master`)
+
+#### 3. Configure the Web Service
+
+DigitalOcean will auto-detect Node.js. Configure:
+
+| Setting | Value |
+|---------|-------|
+| **Type** | Web Service |
+| **Resource Size** | Basic ($5/mo) or Pro |
+| **Instance Count** | 1 (can scale later) |
+| **Build Command** | `npm ci && npm run build` |
+| **Run Command** | `npm start` |
+| **HTTP Port** | `3000` |
+
+#### 4. Set Environment Variables
+
+In the **Environment Variables** section, add:
+
+```
+NODE_ENV=production
+PORT=3000
+```
+
+> **Note:** Do not set PORT to 8080. App Platform routes traffic to your specified port.
+
+#### 5. Configure HTTP Routes
+
+App Platform automatically handles routing, but verify:
+
+- **HTTP Route**: `/` → Your web service
+- **WebSocket support**: Enabled by default
+
+#### 6. Deploy
+
+1. Review your configuration
+2. Click **Create Resources**
+3. Wait for the build and deployment to complete (2-5 minutes)
+
+### App Spec Configuration (Optional)
+
+For advanced control, create an `app.yaml` in your repository root:
+
+```yaml
+name: music-quiz
+region: nyc
+services:
+  - name: web
+    github:
+      repo: your-username/fam_music_game
+      branch: master
+      deploy_on_push: true
+    source_dir: /
+    build_command: npm ci && npm run build
+    run_command: npm start
+    http_port: 3000
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    envs:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3000"
+    health_check:
+      http_path: /api/health
+      initial_delay_seconds: 10
+      period_seconds: 30
+```
+
+Then deploy via CLI:
+
+```bash
+doctl apps create --spec app.yaml
+```
+
+### Custom Domain Setup
+
+1. Go to your app's **Settings** → **Domains**
+2. Click **Add Domain**
+3. Enter your domain (e.g., `musicquiz.example.com`)
+4. Add the provided CNAME record to your DNS:
+   ```
+   Type: CNAME
+   Name: musicquiz (or @ for root)
+   Value: your-app-xxxxx.ondigitalocean.app
+   ```
+5. Wait for DNS propagation (up to 24 hours)
+6. SSL certificate is automatically provisioned
+
+### WebSocket Configuration
+
+App Platform fully supports WebSocket connections. Socket.IO works out of the box with these considerations:
+
+- **Sticky sessions** are automatically handled
+- **Long-polling fallback** works if WebSocket fails
+- No additional Nginx or proxy configuration needed
+
+### Monitoring & Logs
+
+Access from your app dashboard:
+
+- **Runtime Logs**: Real-time application logs
+- **Build Logs**: Deployment build output
+- **Insights**: CPU, memory, and request metrics
+- **Alerts**: Set up notifications for errors or high resource usage
+
+```bash
+# View logs via CLI
+doctl apps logs <app-id> --type=run
+```
+
+### Scaling
+
+#### Vertical Scaling
+Upgrade instance size in **Settings** → **Resources**:
+- Basic ($5/mo) - 512 MB RAM, 1 vCPU
+- Professional ($12/mo) - 1 GB RAM, 1 vCPU
+- Professional ($25/mo) - 2 GB RAM, 2 vCPU
+
+#### Horizontal Scaling
+Increase instance count for high traffic:
+
+```bash
+doctl apps update <app-id> --spec app.yaml  # with updated instance_count
+```
+
+### Auto-Deploy on Push
+
+Auto-deploy is enabled by default. Every push to your configured branch triggers:
+
+1. Build: `npm ci && npm run build`
+2. Health check
+3. Zero-downtime deployment
+
+To disable:
+1. Go to **Settings** → **App Info**
+2. Toggle off **Auto-Deploy**
+
+### Cost Estimates
+
+| Plan | Price | Specs | Best For |
+|------|-------|-------|----------|
+| Basic | $5/mo | 512 MB, 1 vCPU | Development, small games |
+| Pro XS | $12/mo | 1 GB, 1 vCPU | Small production |
+| Pro S | $25/mo | 2 GB, 2 vCPU | Medium traffic |
+| Pro M | $50/mo | 4 GB, 2 vCPU | High traffic |
+
+### Troubleshooting App Platform
+
+#### Build Fails
+
+```bash
+# Check build logs
+doctl apps logs <app-id> --type=build
+```
+
+Common issues:
+- Missing `package-lock.json` - Run `npm install` locally and commit
+- Node version mismatch - Add `"engines": { "node": ">=18" }` to package.json
+
+#### App Crashes on Start
+
+1. Check runtime logs for errors
+2. Verify `PORT` environment variable matches `http_port`
+3. Ensure `npm start` command is correct in package.json
+
+#### WebSocket Connection Issues
+
+- Verify client connects to the correct App Platform URL
+- Check for mixed content (HTTP/HTTPS) issues
+- Ensure Socket.IO client version matches server
+
+#### Health Check Fails
+
+If using custom health check:
+
+```javascript
+// Ensure /api/health returns 200
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
 ```
 
 ---
@@ -479,6 +707,21 @@ pm2 set pm2-logrotate:retain 7
 ---
 
 ## Quick Reference
+
+### DigitalOcean App Platform Checklist
+
+- [ ] Code pushed to GitHub repository
+- [ ] `package.json` has correct `start` script
+- [ ] `package-lock.json` committed
+- [ ] App created in DigitalOcean console
+- [ ] GitHub repository connected
+- [ ] Build command: `npm ci && npm run build`
+- [ ] Run command: `npm start`
+- [ ] HTTP port set to `3000`
+- [ ] Environment variables configured
+- [ ] Health check endpoint working (`/api/health`)
+- [ ] Custom domain configured (optional)
+- [ ] Auto-deploy enabled
 
 ### Hetzner Deployment Checklist
 
