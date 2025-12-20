@@ -27,7 +27,9 @@ import { getSocket } from './socket.js';
  * @returns {string}
  */
 function getSongTitle(song) {
-  return song?.metadata?.title.replace(/^\d+[.\-\s]+/, '').trim() || 'Unknown';
+  const title = song?.metadata?.title;
+  if (!title) return 'Unknown';
+  return title.replace(/^\d+[.\-\s]+/, '').trim() || 'Unknown';
 }
 
 /**
@@ -363,13 +365,20 @@ export function showOptionsToPlayers(options, correctIndex) {
     statusEl.textContent = 'Select your answer!';
   }
 
-  // Populate options
-  options.forEach((option, index) => {
-    const optionEl = getElementById(`nonhost-option-${index}`);
-    if (optionEl) {
-      optionEl.textContent = option.text;
+  // Populate options and hide unused ones
+  for (let i = 0; i < 4; i++) {
+    const optionWrapper = document.querySelector(`#nonhost-kahoot-options .kahoot-option[data-option="${i}"]`);
+    const optionEl = getElementById(`nonhost-option-${i}`);
+
+    if (i < options.length && options[i]) {
+      // Show and populate this option
+      if (optionWrapper) optionWrapper.style.display = '';
+      if (optionEl) optionEl.textContent = options[i].text;
+    } else {
+      // Hide unused option
+      if (optionWrapper) optionWrapper.style.display = 'none';
     }
-  });
+  }
 
   // Reset option states
   resetKahootOptionStates('nonhost');
@@ -485,8 +494,12 @@ export function resetPlayerViewForNextSong(songNumber) {
     statusEl.textContent = `Song ${songNumber} - Listen carefully!`;
   }
 
-  // Reset option states
+  // Reset option states and show all option buttons (for next song)
   resetKahootOptionStates('nonhost');
+  for (let i = 0; i < 4; i++) {
+    const optionWrapper = document.querySelector(`#nonhost-kahoot-options .kahoot-option[data-option="${i}"]`);
+    if (optionWrapper) optionWrapper.style.display = '';
+  }
 
   // Stop any running timer
   stopAnswerTimer();
