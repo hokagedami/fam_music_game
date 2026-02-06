@@ -521,6 +521,17 @@ export function finishGame() {
 export function showMultiplayerResults() {
   if (!state.gameSession) return;
 
+  // Show multiplayer results section, hide single player results
+  const multiResultsDiv = getElementById('multiplayer-results');
+  const singleResultsDiv = getElementById('single-player-results');
+  const playAgainMultiBtn = getElementById('play-again-btn');
+  const playAgainSingleBtn = getElementById('play-again-single-btn');
+
+  if (multiResultsDiv) multiResultsDiv.style.display = 'block';
+  if (singleResultsDiv) singleResultsDiv.classList.add('hidden');
+  if (playAgainMultiBtn) playAgainMultiBtn.style.display = 'inline-block';
+  if (playAgainSingleBtn) playAgainSingleBtn.classList.add('hidden');
+
   const sortedPlayers = [...state.gameSession.players]
     .filter((p) => !p.isHost)
     .sort((a, b) => b.score - a.score);

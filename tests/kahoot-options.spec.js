@@ -148,8 +148,8 @@ test.describe('Multiplayer - Host View', () => {
       // HOST should see audio controls
       await expect(hostPage.locator('#music-audio')).toBeVisible();
 
-      // HOST should see "Show Options" button initially
-      await expect(hostPage.locator('#show-options-btn')).toBeVisible();
+      // NOTE: Show Options button is now hidden by default - options auto-show when music ends
+      // The button exists but is hidden for better UX
 
       // Reveal button has been removed - answers auto-reveal after timer expires
 
@@ -478,20 +478,17 @@ test.describe('Kahoot - Game Flow', () => {
       await hostPage.click('#start-game-btn');
       await expect(hostPage.locator('#game-panel')).toBeVisible({ timeout: 15000 });
 
-      // "Show Options" button should be visible initially
-      const showOptionsBtn = hostPage.locator('#show-options-btn');
-      await expect(showOptionsBtn).toBeVisible();
+      // NOTE: Show Options button is now hidden by default - options auto-show when music ends
+      // We just need to verify the host view is working
+      await expect(hostPage.locator('#host-music-player')).toBeVisible();
 
-      // Click "Show Options" to send options to players
-      await showOptionsBtn.click();
+      // Wait for music clip to end and options to auto-show
+      await hostPage.waitForTimeout(25000);
 
-      // After clicking show options, button should be hidden (answers auto-reveal after timer)
-      await expect(showOptionsBtn).not.toBeVisible({ timeout: 5000 });
+      // Host waiting status should be visible after options are shown
+      await expect(hostPage.locator('#host-waiting-status')).toBeVisible({ timeout: 10000 });
 
-      // Host waiting status should be visible
-      await expect(hostPage.locator('#host-waiting-status')).toBeVisible();
-
-      console.log('[HOST] Show Options -> Auto-reveal flow works correctly');
+      console.log('[HOST] Auto-show options flow works correctly');
 
     } finally {
       await hostContext.close();
@@ -573,7 +570,7 @@ test.describe('Kahoot - Game Flow', () => {
     }
   });
 
-  test('player should see options after host clicks Show Options button', async ({ browser }) => {
+  test('player should see options after music clip ends (auto-show)', async ({ browser }) => {
     const hostContext = await browser.newContext();
     const playerContext = await browser.newContext();
 
@@ -615,15 +612,11 @@ test.describe('Kahoot - Game Flow', () => {
 
       console.log('[PLAYER] Initial state: waiting, options hidden');
 
-      // Host clicks "Show Options"
-      const showOptionsBtn = hostPage.locator('#show-options-btn');
-      await expect(showOptionsBtn).toBeVisible();
-      await showOptionsBtn.click();
-
-      console.log('[HOST] Clicked Show Options button');
+      // Options auto-show when music clip ends (no manual button click needed)
+      console.log('[HOST] Waiting for music clip to end and auto-show options...');
 
       // Player should now see the options (waiting state hidden, options visible)
-      await expect(playerPage.locator('#nonhost-kahoot-options')).toBeVisible({ timeout: 5000 });
+      await expect(playerPage.locator('#nonhost-kahoot-options')).toBeVisible({ timeout: 30000 });
       await expect(playerPage.locator('#player-waiting-state')).not.toBeVisible();
 
       // All 4 shape options should be visible to player
@@ -632,8 +625,8 @@ test.describe('Kahoot - Game Flow', () => {
       await expect(playerPage.locator('#nonhost-kahoot-options .kahoot-yellow')).toBeVisible();
       await expect(playerPage.locator('#nonhost-kahoot-options .kahoot-green')).toBeVisible();
 
-      console.log('[PLAYER] Options now visible after host clicked Show Options');
-      console.log('[FLOW] Host Show Options -> Player sees shapes: SUCCESS');
+      console.log('[PLAYER] Options now visible after auto-show');
+      console.log('[FLOW] Music ends -> Player sees shapes: SUCCESS');
 
     } finally {
       await hostContext.close();

@@ -317,21 +317,42 @@ function finishSinglePlayerGame() {
  * Show single player results
  */
 function showSinglePlayerResults() {
-  const scoreEl = getElementById('final-single-score');
-  const correctEl = getElementById('final-correct-count');
-  const totalEl = getElementById('final-total-songs');
-  const streakEl = getElementById('final-best-streak');
-  const accuracyEl = getElementById('final-accuracy');
+  // Show single player results section, hide multiplayer results
+  const singleResultsDiv = getElementById('single-player-results');
+  const multiResultsDiv = getElementById('multiplayer-results');
+  const playAgainSingleBtn = getElementById('play-again-single-btn');
+  const playAgainMultiBtn = getElementById('play-again-btn');
+
+  if (singleResultsDiv) singleResultsDiv.classList.remove('hidden');
+  if (multiResultsDiv) multiResultsDiv.style.display = 'none';
+  if (playAgainSingleBtn) playAgainSingleBtn.classList.remove('hidden');
+  if (playAgainMultiBtn) playAgainMultiBtn.style.display = 'none';
+
+  const scoreEl = getElementById('final-score');
+  const correctEl = getElementById('correct-count');
+  const partialEl = getElementById('partial-count');
+  const wrongEl = getElementById('wrong-count');
+  const accuracyEl = getElementById('accuracy-percentage');
+  const gradeEl = getElementById('score-grade');
 
   const correctCount = state.singlePlayerAnswers.filter((a) => a.isCorrect).length;
+  const partialCount = state.singlePlayerAnswers.filter((a) => a.isPartial).length;
+  const wrongCount = state.singlePlayerAnswers.filter((a) => !a.isCorrect && !a.isPartial).length;
   const totalSongs = state.singlePlayerSongs.length;
   const accuracy = totalSongs > 0 ? Math.round((correctCount / totalSongs) * 100) : 0;
 
+  // Determine grade
+  let grade = '🎵';
+  if (accuracy >= 90) grade = '🌟';
+  else if (accuracy >= 70) grade = '🎸';
+  else if (accuracy >= 50) grade = '🎤';
+
   if (scoreEl) scoreEl.textContent = String(state.singlePlayerScore);
   if (correctEl) correctEl.textContent = String(correctCount);
-  if (totalEl) totalEl.textContent = String(totalSongs);
-  if (streakEl) streakEl.textContent = String(state.singlePlayerBestStreak);
+  if (partialEl) partialEl.textContent = String(partialCount);
+  if (wrongEl) wrongEl.textContent = String(wrongCount);
   if (accuracyEl) accuracyEl.textContent = `${accuracy}%`;
+  if (gradeEl) gradeEl.textContent = grade;
 
   // Show detailed results
   showSinglePlayerDetailedResults();

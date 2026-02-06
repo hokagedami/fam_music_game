@@ -39,21 +39,37 @@ export function getSocket() {
 
 /**
  * Initialize socket connection
- * @returns {Object}
+ * Works both sync (web) and async (Electron)
+ * @returns {Object} socket instance
  */
-export async function initializeSocket() {
+export function initializeSocket() {
   if (socket && socket.connected) {
     return socket;
   }
 
-  // Get server URL - dynamic in Electron, origin in browser
-  let serverUrl;
+  // In web mode, use synchronous initialization
+  // In Electron mode, the serverUrl will be fetched async but socket connects immediately
+  const serverUrl = isElectron ? null : window.location.origin;
+
   if (isElectron) {
-    serverUrl = await getServerUrl();
-  } else {
-    serverUrl = window.location.origin;
+    // For Electron, get server URL async and connect
+    getServerUrl().then((url) => {
+      if (!socket || !socket.connected) {
+        socket = io(url, {
+          transports: ['polling', 'websocket'],
+          reconnection: true,
+          reconnectionAttempts: 5,
+          reconnectionDelay: 1000,
+          timeout: 10000,
+        });
+        setupSocketEvents(socket);
+      }
+    });
+    // Return null initially, socket will be set up async
+    return null;
   }
 
+  // Web mode - synchronous
   socket = io(serverUrl, {
     transports: ['polling', 'websocket'],
     reconnection: true,
