@@ -1,0 +1,132 @@
+# electron-builder configuration
+# https://www.electron.build/configuration/configuration
+
+appId: com.famquiz.musicgame
+productName: FAM Music Quiz
+copyright: Copyright © 2024 FAM Music Quiz
+
+directories:
+  output: release
+  buildResources: resources
+
+# Files to include in the build
+files:
+  - "**/*"
+  - "!audio/**"
+  - "!test-screenshots/**"
+  - "!tests/**"
+  - "!.git/**"
+  - "!.github/**"
+  - "!.claude/**"
+  - "!node_modules/.cache/**"
+  - "!**/*.md"
+  - "!**/*.log"
+  - "!.env*"
+  - "!.eslintrc*"
+  - "!.prettierrc*"
+  - "!playwright.config.*"
+  - "!esbuild.config.js"
+
+# Extra resources (copied to resources folder)
+extraResources:
+  - from: "resources/"
+    to: "."
+    filter:
+      - "**/*"
+
+# ASAR archive
+asar: true
+asarUnpack:
+  - "**/*.node"
+
+# Windows configuration
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: portable
+      arch:
+        - x64
+  icon: resources/icon.ico
+  artifactName: "${productName}-${version}-${arch}-Setup.${ext}"
+
+# NSIS installer options
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: FAM Music Quiz
+  uninstallDisplayName: FAM Music Quiz
+  license: LICENSE
+  installerIcon: resources/icon.ico
+  uninstallerIcon: resources/icon.ico
+  installerHeaderIcon: resources/icon.ico
+
+# macOS configuration
+mac:
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+    - target: zip
+      arch:
+        - x64
+        - arm64
+  icon: resources/icon.icns
+  category: public.app-category.games
+  artifactName: "${productName}-${version}-${arch}.${ext}"
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+
+# DMG options
+dmg:
+  sign: false
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+
+# Linux configuration
+linux:
+  target:
+    - target: AppImage
+      arch:
+        - x64
+    - target: deb
+      arch:
+        - x64
+  icon: resources/icon.png
+  category: Game
+  artifactName: "${productName}-${version}-${arch}.${ext}"
+  synopsis: Multiplayer music quiz game
+  description: Test your music knowledge solo or with friends in this fun multiplayer music quiz game.
+
+# Debian package options
+deb:
+  depends:
+    - libnotify4
+    - libxtst6
+    - libnss3
+
+# Auto-update configuration
+publish:
+  provider: github
+  owner: yourusername
+  repo: multiplayer-music-quiz
+  releaseType: release
+  private: false
+
+# Rebuild native modules
+npmRebuild: true
+buildDependenciesFromSource: false
+
+# Compression
+compression: normal

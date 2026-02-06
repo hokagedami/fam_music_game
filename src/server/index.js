@@ -243,30 +243,40 @@ io.on('connection', (socket) => {
   registerAllHandlers(io, socket);
 });
 
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received. Shutting down gracefully...');
-  gameStore.stopCleanup();
-  server.close(() => {
-    console.log('Server closed');
-    process.exit(0);
+// Graceful shutdown (only register when not in Electron, to avoid duplicate handlers)
+if (!process.env.ELECTRON_APP) {
+  process.on('SIGTERM', () => {
+    console.log('SIGTERM received. Shutting down gracefully...');
+    gameStore.stopCleanup();
+    server.close(() => {
+      console.log('Server closed');
+      process.exit(0);
+    });
   });
-});
 
-process.on('SIGINT', () => {
-  console.log('SIGINT received. Shutting down gracefully...');
-  gameStore.stopCleanup();
-  server.close(() => {
-    console.log('Server closed');
-    process.exit(0);
+  process.on('SIGINT', () => {
+    console.log('SIGINT received. Shutting down gracefully...');
+    gameStore.stopCleanup();
+    server.close(() => {
+      console.log('Server closed');
+      process.exit(0);
+    });
   });
-});
+}
 
-// Start server - bind to 0.0.0.0 to allow network connections
-const HOST = '0.0.0.0';
-server.listen(config.port, HOST, () => {
-  const localIP = getLocalIP();
-  console.log(`
+// Determine if this script is being run directly (not imported by Electron)
+const isDirectRun = !process.env.ELECTRON_APP && (
+  process.argv[1]?.endsWith('index.js') ||
+  process.argv[1]?.endsWith('server') ||
+  process.argv[1]?.includes('src/server')
+);
+
+// Only auto-start when run directly (not when imported by Electron)
+if (isDirectRun) {
+  const HOST = '0.0.0.0';
+  server.listen(config.port, HOST, () => {
+    const localIP = getLocalIP();
+    console.log(`
 ╔════════════════════════════════════════════════════════════╗
 ║                   FAM MUSIC QUIZ                           ║
 ╠════════════════════════════════════════════════════════════╣
@@ -278,7 +288,8 @@ server.listen(config.port, HOST, () => {
 ║                                                            ║
 ║  Share the Network URL with other devices on your network! ║
 ╚════════════════════════════════════════════════════════════╝
-  `);
-});
+    `);
+  });
+}
 
-export { app, server, io };
+export { app, server, io, config };

@@ -3,7 +3,7 @@
   "version": "3.2.0",
   "description": "Multiplayer music quiz game with Socket.IO and real-time gameplay",
   "type": "module",
-  "main": "src/server/index.js",
+  "main": "electron/main.js",
   "scripts": {
     "start": "node src/server/index.js",
     "dev": "node esbuild.config.js && nodemon --watch src/ --ext js,html,css -x \"node esbuild.config.js && node src/server/index.js\"",
@@ -19,7 +19,13 @@
     "test:headed": "npx playwright test --headed",
     "test:debug": "npx playwright test --debug",
     "test:report": "npx playwright show-report",
-    "test:install": "npx playwright install chromium"
+    "test:install": "npx playwright install chromium",
+    "electron:dev": "npm run build && electron .",
+    "electron:build": "npm run build && electron-builder",
+    "electron:build:win": "npm run build && electron-builder --win",
+    "electron:build:mac": "npm run build && electron-builder --mac",
+    "electron:build:linux": "npm run build && electron-builder --linux",
+    "postinstall": "electron-builder install-app-deps"
   },
   "keywords": [
     "music",
@@ -31,7 +37,9 @@
     "web-game",
     "audio",
     "nodejs",
-    "javascript"
+    "javascript",
+    "electron",
+    "desktop"
   ],
   "author": "Music Quiz Developer",
   "license": "MIT",
@@ -43,7 +51,11 @@
     "express-rate-limit": "^8.2.1",
     "multer": "2.0.h2",
     "socket.io": "^4.8.1",
-    "socket.io-client": "^4.8.1"
+    "socket.io-client": "^4.8.1",
+    "electron-store": "^8.2.0",
+    "better-sqlite3": "^11.0.0",
+    "music-metadata": "^10.0.0",
+    "extract-zip": "^2.0.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.40.0",
@@ -51,7 +63,10 @@
     "eslint": "^9.39.1",
     "eslint-config-prettier": "^10.1.8",
     "nodemon": "^3.0.2",
-    "prettier": "^3.7.4"
+    "prettier": "^3.7.4",
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0",
+    "@electron/rebuild": "^3.7.0"
   },
   "engines": {
     "node": ">=14.0.0",

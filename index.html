@@ -13,9 +13,23 @@
 </head>
 <body>
 <div class="container">
+  <!-- Update Notification Banner (Desktop Only) -->
+  <div id="update-banner" class="update-banner desktop-only hidden">
+    <span id="update-message">Update available</span>
+    <button id="update-action-btn" class="btn btn-small">Update</button>
+    <button class="btn btn-small btn-secondary" onclick="document.getElementById('update-banner').classList.add('hidden')">Later</button>
+  </div>
+
   <div class="header">
-    <h1 id="main-title">🎵 Music Quiz Game</h1>
-    <p id="main-subtitle">Test your music knowledge solo or with friends!</p>
+    <div class="header-content">
+      <h1 id="main-title">Music Quiz Game</h1>
+      <p id="main-subtitle">Test your music knowledge solo or with friends</p>
+    </div>
+    <!-- Settings Button (Desktop Only) -->
+    <button id="settings-btn" class="btn btn-secondary settings-btn desktop-only hidden" onclick="openSettings()">
+      Settings
+    </button>
+    <span id="app-version" class="app-version desktop-only hidden"></span>
   </div>
 
   <!-- Game Status Bar -->
@@ -34,7 +48,7 @@
 
   <!-- Home Panel -->
   <div id="home-panel" class="panel">
-    <h2 id="home-welcome">Welcome to Music Quiz! 🎉</h2>
+    <h2 id="home-welcome">Welcome</h2>
 
     <!-- Return to Active Game -->
     <div id="return-to-game-section" class="return-to-game hidden">
@@ -64,21 +78,21 @@
     <!-- Game Mode Selection -->
     <div class="game-modes">
       <div class="option-card single-player">
-        <h3>🎯 Single Player</h3>
+        <h3>Single Player</h3>
         <p>Practice your music knowledge offline. Perfect for solo sessions and testing your skills!</p>
-        <button class="btn" onclick="startSinglePlayerMode()">🎵 Play Solo</button>
+        <button class="btn" onclick="startSinglePlayerMode()">Play Solo</button>
       </div>
 
       <div class="option-card multiplayer">
-        <h3>🎮 Create Multiplayer Game</h3>
+        <h3>Create Multiplayer Game</h3>
         <p>Host a new music quiz game. Load your music collection and invite friends to join!</p>
-        <button class="btn" onclick="startMultiplayer()">🚀 Create Game</button>
+        <button class="btn" onclick="startMultiplayer()">Create Game</button>
       </div>
 
       <div class="option-card multiplayer">
-        <h3>👥 Join Multiplayer Game</h3>
+        <h3>Join Multiplayer Game</h3>
         <p>Join an existing game using a Game ID shared by the host.</p>
-        <button class="btn btn-secondary" onclick="showJoinGame()">🔗 Join Game</button>
+        <button class="btn btn-secondary" onclick="showJoinGame()">Join Game</button>
       </div>
     </div>
 
@@ -90,27 +104,48 @@
 
   <!-- Setup Panel (Single Player & Multiplayer Create) -->
   <div id="setup-panel" class="panel hidden">
-    <h2 id="setup-title">🎵 Setup Your Game</h2>
+    <h2 id="setup-title">Setup Your Game</h2>
 
     <!-- Hidden input for host name (always "Host") -->
     <input type="hidden" id="player-name-input" value="Host">
 
     <!-- Music Upload Section -->
     <div id="music-upload-section">
-      <h3>📁 Load Your Music Collection</h3>
+      <h3>Load Your Music Collection</h3>
+
+      <!-- Desktop Music Options (Electron Only) -->
+      <div id="desktop-music-options" class="desktop-music-options desktop-only hidden">
+        <div class="desktop-option">
+          <button class="btn" onclick="scanMusicLibrary()">
+            Load from Library
+          </button>
+          <p><small>Scan folders from your music library</small></p>
+        </div>
+        <div class="desktop-option">
+          <div class="download-url-group">
+            <input type="text" id="download-url-input" placeholder="Enter zip URL..." class="url-input">
+            <button class="btn btn-secondary" onclick="downloadMusicFromUrl()">
+              Download
+            </button>
+          </div>
+          <p><small>Download music from a zip file URL</small></p>
+        </div>
+        <div class="divider-text">or select files manually</div>
+      </div>
+
       <div class="upload-area">
         <input type="file" id="music-folder" webkitdirectory directory multiple style="display: none;" onchange="loadMusic(event, 'folder')">
         <button class="btn btn-secondary" onclick="document.getElementById('music-folder').click()">
-          📂 Select Music Folder
+          Select Music Folder
         </button>
         <p>Select a folder containing your music files<br>
-          <small>💡 Supports MP3, WAV, M4A, and AAC files</small></p>
+          <small>💡 Supports MP3, WAV, M4A, FLAC and OGG files</small></p>
 
         <!-- Manual file selection fallback -->
         <div style="margin-top: 15px;">
-          <input type="file" id="music-files" multiple accept=".mp3,.wav,.m4a,.aac,audio/*" style="display: none;" onchange="loadMusic(event, 'files')">
+          <input type="file" id="music-files" multiple accept=".mp3,.wav,.m4a,.aac,.flac,.ogg,audio/*" style="display: none;" onchange="loadMusic(event, 'files')">
           <button class="btn btn-secondary" onclick="document.getElementById('music-files').click()">
-            📄 Select Individual Files
+            Select Individual Files
           </button>
         </div>
       </div>
@@ -119,7 +154,7 @@
 
     <!-- Game Settings -->
     <div id="music-settings-section" class="hidden">
-      <h3>⚙️ Game Settings</h3>
+      <h3>Game Settings</h3>
       <div class="settings-grid">
         <div class="form-group">
           <label for="songs-count">Number of Songs:</label>
@@ -195,15 +230,15 @@
       </div>
 
       <div class="panel-actions">
-        <button class="btn" id="start-game-button" onclick="startGame()">🎯 Start Game</button>
-        <button class="btn btn-secondary" onclick="showPanel('home')">🏠 Back</button>
+        <button class="btn" id="start-game-button" onclick="startGame()">Start Game</button>
+        <button class="btn btn-secondary" onclick="showPanel('home')">Back</button>
       </div>
     </div>
   </div>
 
   <!-- Join Game Panel -->
   <div id="join-panel" class="panel hidden">
-    <h2>👥 Join Music Quiz Game</h2>
+    <h2>Join Game</h2>
 
     <div class="form-group">
       <label for="join-player-name">Your Name:</label>
@@ -216,23 +251,23 @@
     </div>
 
     <div class="panel-actions">
-      <button class="btn" onclick="joinGame()">🔗 Join Game</button>
-      <button class="btn btn-secondary" onclick="showPanel('home')">🏠 Back</button>
+      <button class="btn" onclick="joinGame()">Join Game</button>
+      <button class="btn btn-secondary" onclick="showPanel('home')">Back</button>
     </div>
   </div>
 
   <!-- Lobby Panel -->
   <div id="lobby-panel" class="panel hidden">
-    <h2>🎮 Game Lobby</h2>
+    <h2>Game Lobby</h2>
 
     <div class="lobby-info">
       <div class="game-details">
-        <h3>📋 Game Details</h3>
+        <h3>Game Details</h3>
         <p id="lobby-game-id">Game ID: </p>
         <p id="lobby-settings">Settings: </p>
         <div class="join-options">
-          <button class="btn btn-secondary" onclick="copyGameId()">📋 Copy Game ID</button>
-          <button class="btn btn-secondary" onclick="toggleQRCode()">📱 Show QR Code</button>
+          <button class="btn btn-secondary" onclick="copyGameId()">Copy Game ID</button>
+          <button id="qr-toggle-btn" class="btn btn-secondary" onclick="toggleQRCode()">Show QR Code</button>
         </div>
         <!-- QR Code Container -->
         <div id="qr-code-container" class="qr-code-container hidden">
@@ -243,7 +278,7 @@
       </div>
 
       <div class="players-list">
-        <h3>👥 Players (<span id="current-player-count">0</span>/<span id="max-player-count">6</span>)</h3>
+        <h3>Players (<span id="current-player-count">0</span>/<span id="max-player-count">6</span>)</h3>
         <div id="players-container"></div>
       </div>
     </div>
@@ -251,7 +286,7 @@
     <!-- Host Controls -->
     <div id="host-controls" style="display: none;">
       <div style="text-align: center; margin-top: 30px;">
-        <button id="start-game-btn" class="btn" onclick="startMultiplayerGame()" disabled>🚀 Start Game</button>
+        <button id="start-game-btn" class="btn" onclick="startMultiplayerGame()" disabled>Start Game</button>
       </div>
     </div>
 
@@ -263,7 +298,7 @@
     </div>
 
     <div style="text-align: center; margin-top: 20px;">
-      <button class="btn btn-danger" onclick="leaveGame()">🚪 Leave Game</button>
+      <button class="btn btn-danger" onclick="leaveGame()">Leave Game</button>
     </div>
   </div>
 
@@ -432,7 +467,7 @@
 
   <!-- Results Panel -->
   <div id="results-panel" class="panel hidden">
-    <h2 id="results-title">🎉 Game Results</h2>
+    <h2 id="results-title">Game Results</h2>
 
     <!-- Single Player Results -->
     <div id="single-player-results" class="hidden">
@@ -514,10 +549,10 @@
     <div id="detailed-results-container"></div>
 
     <div class="results-actions">
-      <button id="play-again-btn" class="btn" onclick="playAgain()" style="display: none;">🔄 Play Again</button>
-      <button id="play-again-single-btn" class="btn hidden" onclick="playAgainSingle()">🔄 Play Again</button>
-      <button id="export-results-btn" class="btn btn-secondary hidden" onclick="exportResults()">📄 Export Results</button>
-      <button class="btn btn-secondary" onclick="showPanel('home')" style="margin-left: 15px;">🏠 Home</button>
+      <button id="play-again-btn" class="btn" onclick="playAgain()" style="display: none;">Play Again</button>
+      <button id="play-again-single-btn" class="btn hidden" onclick="playAgainSingle()">Play Again</button>
+      <button id="export-results-btn" class="btn btn-secondary hidden" onclick="exportResults()">Export Results</button>
+      <button class="btn btn-secondary" onclick="showPanel('home')" style="margin-left: 15px;">Home</button>
     </div>
   </div>
 </div>
@@ -526,7 +561,7 @@
 <div id="scoreboard-modal" class="modal hidden">
   <div class="modal-content">
     <div class="modal-header">
-      <h3>🏆 Live Scoreboard</h3>
+      <h3>Live Scoreboard</h3>
       <button class="modal-close" onclick="closeScoreboard()">×</button>
     </div>
     <div class="modal-body">
@@ -566,6 +601,46 @@
   <div class="loading-content">
     <div class="loading-spinner"></div>
     <p id="loading-text">Loading...</p>
+  </div>
+</div>
+
+<!-- Settings Modal (Desktop Only) -->
+<div id="settings-modal" class="modal hidden">
+  <div class="modal-content settings-modal-content">
+    <div class="modal-header">
+      <h3>Settings</h3>
+      <button class="modal-close" onclick="closeSettings()">×</button>
+    </div>
+    <div class="modal-body">
+      <!-- Game History Section -->
+      <div class="settings-section">
+        <h4>Game History</h4>
+        <div class="settings-row">
+          <label class="toggle-label">
+            <input type="checkbox" id="persist-history-toggle" onchange="togglePersistHistory()">
+            <span>Save game history</span>
+          </label>
+          <p class="settings-hint">When enabled, your game results will be saved locally</p>
+        </div>
+        <button class="btn btn-small btn-danger" onclick="clearHistory()">Clear History</button>
+      </div>
+
+      <!-- Music Library Section -->
+      <div class="settings-section">
+        <h4>Music Library Folders</h4>
+        <p class="settings-hint">Add folders to quickly load music from your library</p>
+        <div id="music-library-paths" class="library-paths-list">
+          <!-- Paths will be populated by JavaScript -->
+        </div>
+        <button class="btn btn-secondary btn-small" onclick="addMusicLibraryFolder()">Add Folder</button>
+      </div>
+
+      <!-- Updates Section -->
+      <div class="settings-section">
+        <h4>Updates</h4>
+        <button class="btn btn-secondary btn-small" onclick="checkUpdates()">Check for Updates</button>
+      </div>
+    </div>
   </div>
 </div>
 

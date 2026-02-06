@@ -11,6 +11,7 @@ import * as singlePlayer from './singlePlayer.js';
 import * as multiplayer from './multiplayer.js';
 import * as kahoot from './kahoot.js';
 import { copyToClipboard, getElementById, extractFileMetadataAsync } from './utils.js';
+import * as electronBridge from './electronBridge.js';
 
 // =========================
 // INITIALIZATION
@@ -19,7 +20,7 @@ import { copyToClipboard, getElementById, extractFileMetadataAsync } from './uti
 /**
  * Initialize the application
  */
-function init() {
+async function init() {
   // Setup initial UI
   ui.showPanel('home');
   ui.updateReturnToGameSection();
@@ -27,8 +28,111 @@ function init() {
   // Setup event listeners
   setupEventListeners();
 
+  // Initialize desktop features if running in Electron
+  if (electronBridge.isElectron) {
+    await initDesktopFeatures();
+  }
+
   // Check for join URL parameter
   checkJoinUrlParameter();
+}
+
+/**
+ * Initialize Electron desktop features
+ */
+async function initDesktopFeatures() {
+  // Show desktop-only UI elements
+  const desktopElements = document.querySelectorAll('.desktop-only');
+  desktopElements.forEach((el) => el.classList.remove('hidden'));
+
+  // Hide web-only elements
+  const webElements = document.querySelectorAll('.web-only');
+  webElements.forEach((el) => el.classList.add('hidden'));
+
+  // Setup update notifications
+  electronBridge.onUpdateEvent('available', (data) => {
+    showUpdateNotification('available', data);
+  });
+
+  electronBridge.onUpdateEvent('downloaded', (data) => {
+    showUpdateNotification('downloaded', data);
+  });
+
+  // Load saved settings
+  const savedSettings = await electronBridge.getAllSettings();
+  if (savedSettings.lastGameSettings) {
+    applyGameSettings(savedSettings.lastGameSettings);
+  }
+
+  // Get app version and display
+  const version = await electronBridge.getAppVersion();
+  const versionEl = getElementById('app-version');
+  if (versionEl) {
+    versionEl.textContent = `v${version}`;
+  }
+
+  console.log('Desktop features initialized');
+}
+
+/**
+ * Show update notification banner
+ * @param {string} type - 'available' or 'downloaded'
+ * @param {Object} data - Update data
+ */
+function showUpdateNotification(type, data) {
+  const banner = getElementById('update-banner');
+  if (!banner) return;
+
+  const message = getElementById('update-message');
+  const button = getElementById('update-action-btn');
+
+  if (type === 'available') {
+    if (message) message.textContent = `Update available: ${data.version || 'new version'}`;
+    if (button) {
+      button.textContent = 'Downloading...';
+      button.disabled = true;
+    }
+  } else if (type === 'downloaded') {
+    if (message) message.textContent = `Update ready: ${data.version || 'new version'}`;
+    if (button) {
+      button.textContent = 'Restart to Update';
+      button.disabled = false;
+      button.onclick = () => electronBridge.installUpdate();
+    }
+  }
+
+  banner.classList.remove('hidden');
+}
+
+/**
+ * Apply saved game settings to form
+ * @param {Object} settings - Settings object
+ */
+function applyGameSettings(settings) {
+  if (settings.songsCount) {
+    const el = getElementById('songs-count');
+    if (el) el.value = settings.songsCount;
+  }
+  if (settings.clipDuration) {
+    const el = getElementById('clip-duration');
+    if (el) el.value = settings.clipDuration;
+  }
+  if (settings.answerTime) {
+    const el = getElementById('answer-time');
+    if (el) el.value = settings.answerTime;
+  }
+  if (settings.maxPlayers) {
+    const el = getElementById('max-players');
+    if (el) el.value = settings.maxPlayers;
+  }
+  if (typeof settings.autoplayNext === 'boolean') {
+    const el = getElementById('autoplay-next');
+    if (el) el.checked = settings.autoplayNext;
+  }
+  if (typeof settings.shuffleSongs === 'boolean') {
+    const el = getElementById('shuffle-songs');
+    if (el) el.checked = settings.shuffleSongs;
+  }
 }
 
 /**
@@ -229,6 +333,238 @@ function startGame() {
 }
 
 // =========================
+// DESKTOP FEATURES (Electron)
+// =========================
+
+/**
+ * Open settings modal
+ */
+function openSettings() {
+  const modal = getElementById('settings-modal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    loadSettingsUI();
+  }
+}
+
+/**
+ * Close settings modal
+ */
+function closeSettings() {
+  const modal = getElementById('settings-modal');
+  if (modal) {
+    modal.classList.add('hidden');
+  }
+}
+
+/**
+ * Load settings into the UI
+ */
+async function loadSettingsUI() {
+  if (!electronBridge.isElectron) return;
+
+  // Load persistence setting
+  const persistHistory = await electronBridge.getSetting('persistHistory');
+  const persistToggle = getElementById('persist-history-toggle');
+  if (persistToggle) {
+    persistToggle.checked = persistHistory || false;
+  }
+
+  // Load music library paths
+  const paths = await electronBridge.getMusicLibraryPaths();
+  const pathsList = getElementById('music-library-paths');
+  if (pathsList) {
+    pathsList.innerHTML = '';
+    paths.forEach((p) => {
+      const item = document.createElement('div');
+      item.className = 'library-path-item';
+      item.innerHTML = `
+        <span class="path-text">${p}</span>
+        <button class="btn btn-danger btn-small" onclick="removeMusicLibraryPath('${p.replace(/'/g, "\\'")}')">Remove</button>
+      `;
+      pathsList.appendChild(item);
+    });
+  }
+}
+
+/**
+ * Toggle game history persistence
+ */
+async function togglePersistHistory() {
+  if (!electronBridge.isElectron) return;
+
+  const toggle = getElementById('persist-history-toggle');
+  const enabled = toggle?.checked || false;
+  await electronBridge.setSetting('persistHistory', enabled);
+  ui.showNotification(enabled ? 'Game history will be saved' : 'Game history disabled', 'info');
+}
+
+/**
+ * Add a music library folder
+ */
+async function addMusicLibraryFolder() {
+  if (!electronBridge.isElectron) return;
+
+  const folderPath = await electronBridge.selectFolder();
+  if (folderPath) {
+    await electronBridge.addMusicLibraryPath(folderPath);
+    loadSettingsUI();
+    ui.showNotification('Folder added to library', 'success');
+  }
+}
+
+/**
+ * Remove a music library path
+ * @param {string} path - Path to remove
+ */
+async function removeMusicLibraryPath(path) {
+  if (!electronBridge.isElectron) return;
+
+  await electronBridge.removeMusicLibraryPath(path);
+  loadSettingsUI();
+  ui.showNotification('Folder removed from library', 'info');
+}
+
+/**
+ * Scan all music library folders and load songs
+ */
+async function scanMusicLibrary() {
+  if (!electronBridge.isElectron) return;
+
+  const paths = await electronBridge.getMusicLibraryPaths();
+  if (paths.length === 0) {
+    ui.showNotification('No music folders added. Add folders in settings.', 'error');
+    return;
+  }
+
+  ui.showLoading('Scanning music library...');
+
+  const unsubscribe = electronBridge.onScanProgress((progress) => {
+    ui.showLoading(`Scanning: ${progress.currentFile} (${progress.percentage}%)`);
+  });
+
+  try {
+    const allSongs = [];
+    for (const folderPath of paths) {
+      const result = await electronBridge.scanMusicFolder(folderPath);
+      if (result.success && result.songs) {
+        allSongs.push(...result.songs);
+      }
+    }
+
+    if (allSongs.length > 0) {
+      // Convert to format expected by the game
+      const musicFiles = allSongs.map((song) => ({
+        name: song.fileName,
+        file: null, // No File object for local files
+        url: song.url,
+        metadata: song.metadata,
+      }));
+
+      state.setMusicFiles(musicFiles);
+      ui.displayMusicFileList(state.currentMode === 'single-player' ? 'single' : 'multiplayer');
+
+      const settingsSection = getElementById('music-settings-section');
+      if (settingsSection) {
+        settingsSection.classList.remove('hidden');
+      }
+
+      ui.showNotification(`Loaded ${allSongs.length} songs from library`, 'success');
+    } else {
+      ui.showNotification('No music files found in library folders', 'error');
+    }
+  } catch (error) {
+    console.error('Scan error:', error);
+    ui.showNotification('Failed to scan music library', 'error');
+  } finally {
+    unsubscribe();
+    ui.hideLoading();
+  }
+}
+
+/**
+ * Download music from a zip URL
+ */
+async function downloadMusicFromUrl() {
+  if (!electronBridge.isElectron) return;
+
+  const urlInput = getElementById('download-url-input');
+  const url = urlInput?.value?.trim();
+
+  if (!url) {
+    ui.showNotification('Please enter a URL', 'error');
+    return;
+  }
+
+  ui.showLoading('Downloading music...');
+
+  const unsubscribe = electronBridge.onDownloadProgress((progress) => {
+    if (progress.phase === 'downloading') {
+      ui.showLoading(`Downloading: ${progress.percentage}%`);
+    } else if (progress.phase === 'extracting') {
+      ui.showLoading('Extracting files...');
+    } else if (progress.phase === 'scanning') {
+      ui.showLoading(`Scanning: ${progress.currentFile || ''}`);
+    }
+  });
+
+  try {
+    const result = await electronBridge.downloadMusicZip(url);
+
+    if (result.success && result.songs) {
+      // Convert to format expected by the game
+      const musicFiles = result.songs.map((song) => ({
+        name: song.fileName,
+        file: null,
+        url: song.url,
+        metadata: song.metadata,
+      }));
+
+      state.setMusicFiles(musicFiles);
+      ui.displayMusicFileList(state.currentMode === 'single-player' ? 'single' : 'multiplayer');
+
+      const settingsSection = getElementById('music-settings-section');
+      if (settingsSection) {
+        settingsSection.classList.remove('hidden');
+      }
+
+      ui.showNotification(`Downloaded ${result.songs.length} songs`, 'success');
+      if (urlInput) urlInput.value = '';
+    } else {
+      ui.showNotification(result.error || 'Download failed', 'error');
+    }
+  } catch (error) {
+    console.error('Download error:', error);
+    ui.showNotification('Failed to download music', 'error');
+  } finally {
+    unsubscribe();
+    ui.hideLoading();
+  }
+}
+
+/**
+ * Clear game history
+ */
+async function clearHistory() {
+  if (!electronBridge.isElectron) return;
+
+  if (confirm('Are you sure you want to clear all game history?')) {
+    await electronBridge.clearGameHistory();
+    ui.showNotification('Game history cleared', 'info');
+  }
+}
+
+/**
+ * Check for updates manually
+ */
+async function checkUpdates() {
+  if (!electronBridge.isElectron) return;
+
+  ui.showNotification('Checking for updates...', 'info');
+  await electronBridge.checkForUpdates();
+}
+
+// =========================
 // QR CODE
 // =========================
 
@@ -239,6 +575,7 @@ let qrCodeVisible = false;
  */
 function toggleQRCode() {
   const qrContainer = getElementById('qr-code-container');
+  const toggleBtn = getElementById('qr-toggle-btn');
   if (!qrContainer) return;
 
   qrCodeVisible = !qrCodeVisible;
@@ -246,8 +583,10 @@ function toggleQRCode() {
   if (qrCodeVisible) {
     generateQRCode();
     qrContainer.classList.remove('hidden');
+    if (toggleBtn) toggleBtn.textContent = 'Hide QR Code';
   } else {
     qrContainer.classList.add('hidden');
+    if (toggleBtn) toggleBtn.textContent = 'Show QR Code';
   }
 }
 
@@ -330,6 +669,18 @@ window.testConnection = socket.testConnection;
 
 // Assign to window - Test helpers
 window.__testSetMusicFiles = __testSetMusicFiles;
+
+// Assign to window - Desktop features (Electron)
+window.openSettings = openSettings;
+window.closeSettings = closeSettings;
+window.togglePersistHistory = togglePersistHistory;
+window.addMusicLibraryFolder = addMusicLibraryFolder;
+window.removeMusicLibraryPath = removeMusicLibraryPath;
+window.scanMusicLibrary = scanMusicLibrary;
+window.downloadMusicFromUrl = downloadMusicFromUrl;
+window.clearHistory = clearHistory;
+window.checkUpdates = checkUpdates;
+window.isElectron = electronBridge.isElectron;
 
 // Initialize when DOM is ready
 if (document.readyState === 'loading') {

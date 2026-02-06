@@ -5,6 +5,7 @@
 import { io } from 'socket.io-client';
 
 import * as state from './state.js';
+import { isElectron, getServerUrl } from './electronBridge.js';
 import {
   showNotification,
   updateConnectionStatus,
@@ -40,14 +41,20 @@ export function getSocket() {
  * Initialize socket connection
  * @returns {Object}
  */
-export function initializeSocket() {
+export async function initializeSocket() {
   if (socket && socket.connected) {
     return socket;
   }
 
-  // Use window.location.origin to get the correct server URL
-  // This works for both localhost and network IP access
-  socket = io(window.location.origin, {
+  // Get server URL - dynamic in Electron, origin in browser
+  let serverUrl;
+  if (isElectron) {
+    serverUrl = await getServerUrl();
+  } else {
+    serverUrl = window.location.origin;
+  }
+
+  socket = io(serverUrl, {
     transports: ['polling', 'websocket'],
     reconnection: true,
     reconnectionAttempts: 5,
