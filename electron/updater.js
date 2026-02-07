@@ -9,6 +9,7 @@ import { app } from 'electron';
 import { settings } from './services/settings.js';
 
 let mainWindow = null;
+let updateDownloaded = false;
 
 /**
  * Setup auto-updater with event handlers
@@ -54,6 +55,7 @@ export function setupAutoUpdater(window) {
 
   autoUpdater.on('update-downloaded', (info) => {
     console.log('Update downloaded:', info.version);
+    updateDownloaded = true;
     sendToRenderer('update-downloaded', {
       version: info.version,
       releaseDate: info.releaseDate,
@@ -104,9 +106,15 @@ export async function checkForUpdates() {
 /**
  * Download and install update
  * Quits the app and installs the update
+ * @returns {{success: boolean, error?: string}}
  */
 export function installUpdate() {
+  if (!updateDownloaded) {
+    console.log('Update not yet downloaded, cannot install');
+    return { success: false, error: 'Update is still downloading. Please wait.' };
+  }
   autoUpdater.quitAndInstall(false, true);
+  return { success: true };
 }
 
 /**

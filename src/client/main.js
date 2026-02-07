@@ -57,16 +57,23 @@ async function initDesktopFeatures() {
   const updateActionBtn = getElementById('update-action-btn');
   const dismissUpdateBtn = getElementById('dismiss-update-btn');
 
+  console.log('Setting up update buttons:', { updateActionBtn: !!updateActionBtn, dismissUpdateBtn: !!dismissUpdateBtn });
+
   if (updateActionBtn) {
     updateActionBtn.addEventListener('click', () => {
+      console.log('Update button clicked');
       electronBridge.installUpdate();
     });
   }
 
   if (dismissUpdateBtn) {
     dismissUpdateBtn.addEventListener('click', () => {
+      console.log('Dismiss button clicked');
       const banner = getElementById('update-banner');
-      if (banner) banner.classList.add('hidden');
+      if (banner) {
+        banner.classList.add('hidden');
+        console.log('Banner hidden');
+      }
     });
   }
 
