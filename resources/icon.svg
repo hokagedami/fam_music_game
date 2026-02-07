@@ -1,37 +1,65 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#e94560;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#9d4edd;stop-opacity:1" />
+    <!-- Vibrant gradient background -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea"/>
+      <stop offset="50%" style="stop-color:#f5576c"/>
+      <stop offset="100%" style="stop-color:#764ba2"/>
     </linearGradient>
-    <linearGradient id="note" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#00d4ff;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#ffffff;stop-opacity:1" />
+
+    <!-- Gold/yellow gradient for music note -->
+    <linearGradient id="noteGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffd93d"/>
+      <stop offset="100%" style="stop-color:#ff6b6b"/>
     </linearGradient>
+
+    <!-- White glow -->
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
   </defs>
 
-  <!-- Background circle -->
-  <circle cx="256" cy="256" r="240" fill="url(#bg)" />
+  <!-- Background rounded square -->
+  <rect x="16" y="16" width="480" height="480" rx="100" ry="100" fill="url(#bgGrad)"/>
 
-  <!-- Inner shadow -->
-  <circle cx="256" cy="256" r="200" fill="rgba(0,0,0,0.2)" />
-  <circle cx="256" cy="250" r="200" fill="#1a1a2e" />
+  <!-- Inner decorative circle -->
+  <circle cx="256" cy="256" r="180" fill="rgba(255,255,255,0.15)"/>
 
-  <!-- Music note -->
-  <g fill="url(#note)">
-    <!-- Note head 1 -->
-    <ellipse cx="180" cy="340" rx="50" ry="40" />
-    <!-- Note head 2 -->
-    <ellipse cx="320" cy="300" rx="50" ry="40" />
-    <!-- Stems -->
-    <rect x="220" y="140" width="12" height="200" />
-    <rect x="360" y="100" width="12" height="200" />
-    <!-- Beam -->
-    <polygon points="220,140 372,100 372,120 220,160" />
+  <!-- Music note symbol -->
+  <g filter="url(#glow)">
+    <!-- Double eighth note -->
+    <g fill="url(#noteGrad)">
+      <!-- Left note head -->
+      <ellipse cx="150" cy="320" rx="45" ry="35" transform="rotate(-15 150 320)"/>
+      <!-- Right note head -->
+      <ellipse cx="290" cy="290" rx="45" ry="35" transform="rotate(-15 290 290)"/>
+      <!-- Left stem -->
+      <rect x="185" y="130" width="14" height="195" rx="7"/>
+      <!-- Right stem -->
+      <rect x="325" y="100" width="14" height="195" rx="7"/>
+      <!-- Top beam -->
+      <path d="M185 130 Q255 90 339 100 L339 125 Q255 115 185 155 Z"/>
+      <!-- Bottom beam -->
+      <path d="M185 165 Q255 125 339 135 L339 160 Q255 150 185 190 Z"/>
+    </g>
   </g>
 
-  <!-- Question mark overlay -->
-  <g fill="rgba(255,255,255,0.9)">
-    <text x="256" y="420" font-family="Arial Black, sans-serif" font-size="120" text-anchor="middle" font-weight="bold">?</text>
+  <!-- Fun decorative elements -->
+  <!-- Stars/sparkles -->
+  <g fill="#fff" opacity="0.9">
+    <polygon points="380,140 385,155 400,155 388,165 392,180 380,170 368,180 372,165 360,155 375,155" />
+    <polygon points="120,180 123,190 133,190 125,197 128,207 120,200 112,207 115,197 107,190 117,190" transform="scale(0.8) translate(30,50)"/>
+    <polygon points="420,280 423,290 433,290 425,297 428,307 420,300 412,307 415,297 407,290 417,290" transform="scale(0.7) translate(120,-20)"/>
+  </g>
+
+  <!-- Question mark badge -->
+  <g>
+    <circle cx="400" cy="400" r="70" fill="#00d4ff"/>
+    <circle cx="400" cy="400" r="60" fill="#0ea5e9"/>
+    <text x="400" y="425" font-family="Arial Black, Arial, sans-serif" font-size="80" text-anchor="middle" fill="#fff" font-weight="bold">?</text>
   </g>
 </svg>
