@@ -441,3 +441,33 @@ export const storage = {
     localStorage.clear();
   },
 };
+
+/**
+ * Sync visual setting buttons with their hidden select values
+ * Call this when navigating to setup page to ensure buttons reflect current values
+ */
+export function syncSettingsButtons() {
+  const settingMappings = [
+    { container: 'songs-options', select: 'songs-count' },
+    { container: 'duration-options', select: 'clip-duration' },
+    { container: 'answer-options', select: 'answer-time' },
+    { container: 'players-options', select: 'max-players' },
+    { container: 'difficulty-options', select: 'difficulty' },
+  ];
+
+  settingMappings.forEach(({ container, select }) => {
+    const containerEl = getElementById(container);
+    const selectEl = getElementById(select);
+
+    if (containerEl && selectEl) {
+      const currentValue = selectEl.value;
+      containerEl.querySelectorAll('.setting-btn').forEach((btn) => {
+        if (btn.dataset.value === currentValue) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+    }
+  });
+}

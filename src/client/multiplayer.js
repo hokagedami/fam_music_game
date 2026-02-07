@@ -9,7 +9,8 @@ import {
   formatSongAnswer,
   getElementById,
   getOrdinalSuffix,
-  shuffleArray
+  shuffleArray,
+  syncSettingsButtons
 } from './utils.js';
 import {
   addLiveUpdate,
@@ -88,18 +89,8 @@ export function showJoinGame() {
  * Setup multiplayer UI
  */
 function setupMultiplayerUI() {
-  const songsCountSelect = getElementById('songs-count');
-  const clipDurationSelect = getElementById('clip-duration');
   const startButton = getElementById('start-game-button');
   const maxPlayersGroup = getElementById('max-players-group');
-
-  if (songsCountSelect) {
-    songsCountSelect.value = '10';
-  }
-
-  if (clipDurationSelect) {
-    clipDurationSelect.value = '20';
-  }
 
   if (startButton) {
     startButton.disabled = state.musicFiles.length === 0;
@@ -109,6 +100,9 @@ function setupMultiplayerUI() {
   if (maxPlayersGroup) {
     maxPlayersGroup.style.display = '';
   }
+
+  // Sync visual buttons with current select values
+  syncSettingsButtons();
 }
 
 /**

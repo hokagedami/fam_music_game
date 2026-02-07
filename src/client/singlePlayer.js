@@ -3,7 +3,7 @@
  */
 
 import * as state from './state.js';
-import { getElementById, shuffleArray, formatSongAnswer, extractSingleFileMetadata } from './utils.js';
+import { getElementById, shuffleArray, formatSongAnswer, extractSingleFileMetadata, syncSettingsButtons } from './utils.js';
 import {
   showPanel,
   showNotification,
@@ -41,18 +41,8 @@ export function startSinglePlayerMode() {
  * Setup single player UI
  */
 function setupSinglePlayerUI() {
-  const songsCountSelect = getElementById('songs-count');
-  const clipDurationSelect = getElementById('clip-duration');
   const startButton = getElementById('start-game-button');
   const maxPlayersGroup = getElementById('max-players-group');
-
-  if (songsCountSelect) {
-    songsCountSelect.value = '10';
-  }
-
-  if (clipDurationSelect) {
-    clipDurationSelect.value = '20';
-  }
 
   if (startButton) {
     startButton.disabled = state.musicFiles.length === 0;
@@ -62,6 +52,9 @@ function setupSinglePlayerUI() {
   if (maxPlayersGroup) {
     maxPlayersGroup.style.display = 'none';
   }
+
+  // Sync visual buttons with current select values
+  syncSettingsButtons();
 }
 
 /**
