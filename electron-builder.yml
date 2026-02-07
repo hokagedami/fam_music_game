@@ -1,9 +1,9 @@
 # electron-builder configuration
 # https://www.electron.build/configuration/configuration
 
-appId: com.famquiz.musicgame
-productName: FAM Music Quiz
-copyright: Copyright © 2024 FAM Music Quiz
+appId: com.funmusicgame.app
+productName: Fun Music Game
+copyright: Copyright © 2024 Michael Akinyemi
 
 directories:
   output: release
@@ -33,6 +33,8 @@ extraResources:
     to: "."
     filter:
       - "**/*"
+      - "!*.md"
+      - "!*.svg"
 
 # ASAR archive
 asar: true
@@ -59,8 +61,8 @@ nsis:
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
-  shortcutName: FAM Music Quiz
-  uninstallDisplayName: FAM Music Quiz
+  shortcutName: Fun Music Game
+  uninstallDisplayName: Fun Music Game
   license: LICENSE
   installerIcon: resources/icon.ico
   uninstallerIcon: resources/icon.ico
@@ -80,10 +82,8 @@ mac:
   icon: resources/icon.icns
   category: public.app-category.games
   artifactName: "${productName}-${version}-${arch}.${ext}"
-  hardenedRuntime: true
+  hardenedRuntime: false
   gatekeeperAssess: false
-  entitlements: build/entitlements.mac.plist
-  entitlementsInherit: build/entitlements.mac.plist
 
 # DMG options
 dmg:
@@ -110,6 +110,7 @@ linux:
   artifactName: "${productName}-${version}-${arch}.${ext}"
   synopsis: Multiplayer music quiz game
   description: Test your music knowledge solo or with friends in this fun multiplayer music quiz game.
+  maintainer: Michael Akinyemi <dmike.akinyemi@gmail.com>
 
 # Debian package options
 deb:
@@ -121,8 +122,8 @@ deb:
 # Auto-update configuration
 publish:
   provider: github
-  owner: yourusername
-  repo: multiplayer-music-quiz
+  owner: hokagedami
+  repo: fam_music_game
   releaseType: release
   private: false
 

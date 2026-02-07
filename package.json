@@ -1,6 +1,6 @@
 {
   "name": "multiplayer-music-quiz",
-  "version": "3.2.0",
+  "version": "3.2.1",
   "description": "Multiplayer music quiz game with Socket.IO and real-time gameplay",
   "type": "module",
   "main": "electron/main.js",
@@ -41,7 +41,10 @@
     "electron",
     "desktop"
   ],
-  "author": "Music Quiz Developer",
+  "author": {
+    "name": "Michael Akinyemi",
+    "email": "dmike.akinyemi@gmail.com"
+  },
   "license": "MIT",
   "dependencies": {
     "better-sqlite3": "^11.10.0",

@@ -115,6 +115,8 @@ jobs:
       - name: Generate ICNS for macOS
         run: |
           cd resources
+          # Remove any existing icns to avoid conflicts
+          rm -f icon.icns
           mkdir -p icon.iconset
           sips -z 16 16 icon.png --out icon.iconset/icon_16x16.png
           sips -z 32 32 icon.png --out icon.iconset/icon_16x16@2x.png
