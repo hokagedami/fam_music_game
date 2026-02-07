@@ -28,6 +28,7 @@ files:
   - "!esbuild.config.js"
 
 # Extra resources (copied to resources folder)
+# Note: Icon files are handled automatically by electron-builder via icon: config
 extraResources:
   - from: "resources/"
     to: "."
@@ -35,6 +36,10 @@ extraResources:
       - "**/*"
       - "!*.md"
       - "!*.svg"
+      - "!icon.*"
+      - "!*.ico"
+      - "!*.icns"
+      - "!*.png"
 
 # ASAR archive
 asar: true
