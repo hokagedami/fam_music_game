@@ -4082,3 +4082,497 @@ body {
     font-size: 0.8rem;
   }
 }
+
+/* ========================================
+   ODYSSEY THEME - ALL PANELS
+   ======================================== */
+
+/* All Panels Base Style */
+.panel {
+  background: linear-gradient(145deg, #fef9f3 0%, #fff5eb 100%);
+  border-radius: 30px;
+  padding: 30px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  color: #333;
+}
+
+.panel h2, .panel h3 {
+  color: #333;
+}
+
+.panel p {
+  color: #555;
+}
+
+.panel label {
+  color: #444;
+}
+
+/* Panel Header */
+.panel-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  margin: -30px -30px 25px -30px;
+  padding: 20px 30px;
+  border-radius: 30px 30px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.panel-header h2 {
+  color: #fff !important;
+  margin: 0;
+  font-weight: 700;
+}
+
+.panel-header .back-btn {
+  background: rgba(255,255,255,0.2);
+  border: 2px solid rgba(255,255,255,0.3);
+  color: #fff;
+}
+
+.panel-header .back-btn:hover {
+  background: rgba(255,255,255,0.3);
+}
+
+/* Connection Status in Header */
+.connection-status-indicator {
+  background: rgba(255,255,255,0.2);
+  padding: 8px 15px;
+  border-radius: 20px;
+  color: #fff;
+}
+
+/* Form Inputs - Odyssey Style */
+.panel input[type="text"],
+.panel input[type="number"],
+.panel input[type="password"],
+.panel input[type="url"],
+.panel select,
+.panel textarea {
+  background: #fff;
+  border: 2px solid #e0d5cc;
+  border-radius: 12px;
+  padding: 12px 15px;
+  color: #333;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.panel input:focus,
+.panel select:focus,
+.panel textarea:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+  outline: none;
+}
+
+/* Buttons - Colorful Odyssey Style */
+.panel .btn {
+  background: linear-gradient(135deg, #f472b6 0%, #db2777 100%);
+  color: #fff;
+  border: none;
+  box-shadow: 0 4px 15px rgba(219, 39, 119, 0.4);
+}
+
+.panel .btn:hover {
+  box-shadow: 0 6px 25px rgba(219, 39, 119, 0.5);
+}
+
+.panel .btn-secondary {
+  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+  color: #4338ca;
+  border: 2px solid #a5b4fc;
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.2);
+}
+
+.panel .btn-secondary:hover {
+  background: linear-gradient(135deg, #c7d2fe 0%, #a5b4fc 100%);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.3);
+}
+
+.panel .btn-danger {
+  background: linear-gradient(135deg, #f87171 0%, #dc2626 100%);
+  box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4);
+}
+
+/* Setup Panel */
+#setup-panel h3 {
+  color: #667eea;
+  font-weight: 700;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #e0d5cc;
+}
+
+/* Upload Area */
+.upload-area {
+  background: linear-gradient(145deg, #f0f9ff 0%, #e0f2fe 100%);
+  border: 2px dashed #38bdf8;
+  border-radius: 20px;
+  padding: 30px;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.upload-area:hover {
+  border-color: #0284c7;
+  background: linear-gradient(145deg, #e0f2fe 0%, #bae6fd 100%);
+}
+
+.upload-area p {
+  color: #0369a1;
+}
+
+/* File List */
+.file-list {
+  background: #fff;
+  border: 2px solid #e0d5cc;
+  border-radius: 15px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.file-item {
+  padding: 10px 15px;
+  border-bottom: 1px solid #f0e6dc;
+  color: #333;
+}
+
+.file-item:last-child {
+  border-bottom: none;
+}
+
+/* Settings Grid */
+.settings-grid {
+  background: linear-gradient(145deg, #fdf4ff 0%, #fae8ff 100%);
+  border-radius: 20px;
+  padding: 20px;
+  border: 2px solid #e9d5ff;
+}
+
+.settings-grid label {
+  color: #7c3aed;
+  font-weight: 600;
+}
+
+/* Join Panel */
+#join-panel .join-input-group {
+  background: #fff;
+  border-radius: 15px;
+  padding: 20px;
+  border: 2px solid #e0d5cc;
+}
+
+#join-panel input {
+  font-size: 1.5rem;
+  text-align: center;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+
+/* Lobby Panel */
+#lobby-panel {
+  position: relative;
+}
+
+.lobby-info {
+  background: linear-gradient(145deg, #ecfdf5 0%, #d1fae5 100%);
+  border-radius: 20px;
+  padding: 20px;
+  border: 2px solid #6ee7b7;
+}
+
+.lobby-info h3 {
+  color: #047857 !important;
+}
+
+.players-list {
+  background: #fff;
+  border-radius: 15px;
+  border: 2px solid #e0d5cc;
+  overflow: hidden;
+}
+
+.player-item {
+  padding: 12px 20px;
+  border-bottom: 1px solid #f0e6dc;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #333;
+}
+
+.player-item:last-child {
+  border-bottom: none;
+}
+
+.player-item.host {
+  background: linear-gradient(90deg, #fef3c7 0%, #fde68a 100%);
+}
+
+.player-badge {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: #fff;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* Game Panel */
+#game-panel {
+  background: linear-gradient(145deg, #1e1b4b 0%, #312e81 100%);
+  color: #fff;
+}
+
+#game-panel h2, #game-panel h3, #game-panel p, #game-panel label {
+  color: #fff;
+}
+
+.music-player {
+  background: linear-gradient(145deg, #4c1d95 0%, #5b21b6 100%);
+  border-radius: 25px;
+  padding: 30px;
+  border: 3px solid #7c3aed;
+  box-shadow: 0 10px 40px rgba(124, 58, 237, 0.3);
+}
+
+.timer {
+  font-size: 4rem;
+  font-weight: 800;
+  color: #fbbf24;
+  text-shadow: 0 0 30px rgba(251, 191, 36, 0.5);
+}
+
+/* Kahoot Options - Odyssey Colors */
+.kahoot-option[data-color="red"] {
+  background: linear-gradient(145deg, #f87171 0%, #dc2626 100%) !important;
+}
+
+.kahoot-option[data-color="blue"] {
+  background: linear-gradient(145deg, #60a5fa 0%, #2563eb 100%) !important;
+}
+
+.kahoot-option[data-color="yellow"] {
+  background: linear-gradient(145deg, #fbbf24 0%, #d97706 100%) !important;
+}
+
+.kahoot-option[data-color="green"] {
+  background: linear-gradient(145deg, #4ade80 0%, #16a34a 100%) !important;
+}
+
+/* Results Panel */
+#results-panel {
+  background: linear-gradient(145deg, #fef9f3 0%, #fff5eb 100%);
+}
+
+.results-header {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  margin: -30px -30px 25px -30px;
+  padding: 30px;
+  border-radius: 30px 30px 0 0;
+  text-align: center;
+}
+
+.results-header h2 {
+  color: #fff !important;
+  font-size: 2rem;
+}
+
+.winner-display {
+  background: linear-gradient(145deg, #fef3c7 0%, #fde68a 100%);
+  border: 3px solid #f59e0b;
+  border-radius: 20px;
+  padding: 25px;
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+.winner-display h3 {
+  color: #b45309 !important;
+  font-size: 1.8rem;
+}
+
+.leaderboard {
+  background: #fff;
+  border-radius: 20px;
+  border: 2px solid #e0d5cc;
+  overflow: hidden;
+}
+
+.leaderboard-item {
+  padding: 15px 20px;
+  border-bottom: 1px solid #f0e6dc;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.leaderboard-item:nth-child(1) {
+  background: linear-gradient(90deg, #fef3c7 0%, transparent 100%);
+}
+
+.leaderboard-item:nth-child(2) {
+  background: linear-gradient(90deg, #f3f4f6 0%, transparent 100%);
+}
+
+.leaderboard-item:nth-child(3) {
+  background: linear-gradient(90deg, #fed7aa 0%, transparent 100%);
+}
+
+.rank-badge {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: #fff;
+}
+
+.rank-1 { background: linear-gradient(145deg, #fbbf24, #f59e0b); }
+.rank-2 { background: linear-gradient(145deg, #9ca3af, #6b7280); }
+.rank-3 { background: linear-gradient(145deg, #fb923c, #ea580c); }
+
+/* Modals - Odyssey Style */
+.modal-content {
+  background: linear-gradient(145deg, #fef9f3 0%, #fff5eb 100%);
+  border-radius: 25px;
+  border: none;
+  box-shadow: 0 25px 80px rgba(0,0,0,0.4);
+}
+
+.modal-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 25px 25px 0 0;
+  padding: 20px 25px;
+}
+
+.modal-header h2 {
+  color: #fff;
+}
+
+.close-btn {
+  color: #fff;
+  background: rgba(255,255,255,0.2);
+  border: none;
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.close-btn:hover {
+  background: rgba(255,255,255,0.3);
+  transform: rotate(90deg);
+}
+
+/* QR Code Section */
+.qr-section {
+  background: #fff;
+  border-radius: 20px;
+  padding: 20px;
+  text-align: center;
+  border: 2px solid #e0d5cc;
+}
+
+/* Game Status Bar - Odyssey */
+.game-status-bar {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.9) 0%, rgba(118, 75, 162, 0.9) 100%);
+  border: none;
+  color: #fff;
+}
+
+.game-status-bar span {
+  color: #fff;
+}
+
+/* Desktop Options */
+.desktop-music-options {
+  background: linear-gradient(145deg, #f0fdf4 0%, #dcfce7 100%);
+  border: 2px solid #86efac;
+  border-radius: 20px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.desktop-option {
+  background: #fff;
+  border-radius: 15px;
+  padding: 15px;
+  margin-bottom: 10px;
+  border: 2px solid #e0d5cc;
+}
+
+/* Return to Game Section */
+.return-to-game {
+  background: linear-gradient(145deg, #fef3c7 0%, #fde68a 100%);
+  border: 2px solid #f59e0b;
+  border-radius: 20px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.return-to-game h3 {
+  color: #b45309 !important;
+}
+
+/* Offline Setup Modal */
+.offline-setup-content {
+  max-width: 500px;
+}
+
+.offline-option {
+  background: #fff;
+  border: 2px solid #e0d5cc;
+}
+
+.offline-divider span {
+  color: #666;
+}
+
+/* Song Info Display */
+.song-info {
+  background: rgba(255,255,255,0.1);
+  border-radius: 15px;
+  padding: 15px;
+  margin-top: 15px;
+}
+
+.song-title {
+  color: #fbbf24;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.song-artist {
+  color: rgba(255,255,255,0.8);
+}
+
+/* Progress bars */
+.progress-bar {
+  background: rgba(255,255,255,0.2);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  background: linear-gradient(90deg, #4ade80 0%, #22c55e 100%);
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+/* Score display */
+.score-display {
+  background: linear-gradient(145deg, #4ade80 0%, #22c55e 100%);
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 15px;
+  font-weight: 700;
+  font-size: 1.2rem;
+  box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4);
+}
