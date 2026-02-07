@@ -6,7 +6,8 @@
 import { createServer } from 'http';
 import net from 'net';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
+import { app } from 'electron';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -152,13 +153,16 @@ export class EmbeddedServer {
     process.env.PORT = String(this.port);
     process.env.NODE_ENV = process.env.NODE_ENV || 'production';
     process.env.ELECTRON_APP = 'true';
+    // Provide a writable path for uploads and other data outside the ASAR archive
+    process.env.ELECTRON_USER_DATA = app.getPath('userData');
 
     // Dynamically import the server module
     const serverPath = path.join(__dirname, '../../src/server/index.js');
 
     try {
       // Import the server module - it exports { app, server, io }
-      const serverModule = await import(`file://${serverPath}`);
+      // Use pathToFileURL for correct file:// URL on all platforms (handles Windows backslashes)
+      const serverModule = await import(pathToFileURL(serverPath).href);
 
       // If the server auto-started, we need to use it
       // Otherwise, start it manually

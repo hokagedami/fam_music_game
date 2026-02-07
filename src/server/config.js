@@ -8,6 +8,13 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Determine the project root
+const projectRoot = path.join(__dirname, '../../');
+
+// When running inside Electron's ASAR archive, writable paths must be outside the archive.
+// ELECTRON_USER_DATA is set by the embedded server before importing this module.
+const writableRoot = process.env.ELECTRON_USER_DATA || projectRoot;
+
 export const config = {
   // Server
   port: parseInt(process.env.PORT || '3000', 10),
@@ -27,10 +34,10 @@ export const config = {
   maxFileSizeMb: parseInt(process.env.MAX_FILE_SIZE_MB || '50', 10),
   uploadDir: process.env.UPLOAD_DIR || 'uploads',
 
-  // Paths
-  publicDir: path.join(__dirname, '../../'),
-  distClientDir: path.join(__dirname, '../../dist/client'),
-  uploadsDir: path.join(__dirname, '../../', process.env.UPLOAD_DIR || 'uploads'),
+  // Paths - static/read-only files from project root, writable files from writableRoot
+  publicDir: projectRoot,
+  distClientDir: path.join(projectRoot, 'dist/client'),
+  uploadsDir: path.join(writableRoot, process.env.UPLOAD_DIR || 'uploads'),
 };
 
 export const isDev = config.nodeEnv === 'development';
