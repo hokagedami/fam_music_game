@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Music Quiz Game</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=4">
   <!-- Socket.IO is bundled in the TypeScript client, no CDN needed -->
   <!-- jsmediatags for audio metadata extraction -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
@@ -12,6 +12,25 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
+<script>
+  // Detect Electron and add class to body
+  function checkElectron() {
+    if (window.electronAPI && window.electronAPI.isElectron) {
+      document.body.classList.add('is-electron');
+      return true;
+    }
+    return false;
+  }
+  // Check immediately
+  if (!checkElectron()) {
+    // If not detected, check again after a short delay (preload may not be ready)
+    setTimeout(checkElectron, 0);
+    setTimeout(checkElectron, 50);
+    setTimeout(checkElectron, 100);
+    // Also check when DOM is ready
+    document.addEventListener('DOMContentLoaded', checkElectron);
+  }
+</script>
 <div class="container">
   <!-- Update Notification Banner (Desktop Only) -->
   <div id="update-banner" class="update-banner desktop-only hidden">
@@ -94,6 +113,14 @@
         <p>Join an existing game using a Game ID shared by the host.</p>
         <button class="btn btn-secondary" onclick="showJoinGame()">Join Game</button>
       </div>
+
+      <!-- Offline Multiplayer (Desktop Only) -->
+      <div class="option-card offline-multiplayer desktop-only hidden">
+        <div class="offline-badge">No Internet Needed</div>
+        <h3>Offline Multiplayer</h3>
+        <p>Create a WiFi hotspot and play with friends nearby. No internet or existing network required!</p>
+        <button class="btn" onclick="startOfflineMultiplayer()">Play Offline</button>
+      </div>
     </div>
 
     <div id="recent-games" style="display: none;">
@@ -104,7 +131,14 @@
 
   <!-- Setup Panel (Single Player & Multiplayer Create) -->
   <div id="setup-panel" class="panel hidden">
-    <h2 id="setup-title">Setup Your Game</h2>
+    <div class="panel-header">
+      <button class="btn btn-secondary back-btn" onclick="showPanel('home')">← Back</button>
+      <h2 id="setup-title">Setup Your Game</h2>
+      <div id="setup-connection-status" class="connection-status-indicator">
+        <span class="status-dot"></span>
+        <span id="status-text">Connecting...</span>
+      </div>
+    </div>
 
     <!-- Hidden input for host name (always "Host") -->
     <input type="hidden" id="player-name-input" value="Host">
@@ -121,25 +155,19 @@
           </button>
           <p><small>Scan folders from your music library</small></p>
         </div>
-        <div class="desktop-option">
-          <div class="download-url-group">
-            <input type="text" id="download-url-input" placeholder="Enter zip URL..." class="url-input">
-            <button class="btn btn-secondary" onclick="downloadMusicFromUrl()">
-              Download
-            </button>
-          </div>
-          <p><small>Download music from a zip file URL</small></p>
-        </div>
-        <div class="divider-text">or select files manually</div>
+        <button class="btn-link toggle-manual-upload" onclick="toggleManualUpload()">
+          Show manual file selection
+        </button>
       </div>
 
-      <div class="upload-area">
+      <!-- Manual upload area - hidden by default on desktop -->
+      <div id="manual-upload-area" class="upload-area">
         <input type="file" id="music-folder" webkitdirectory directory multiple style="display: none;" onchange="loadMusic(event, 'folder')">
         <button class="btn btn-secondary" onclick="document.getElementById('music-folder').click()">
           Select Music Folder
         </button>
         <p>Select a folder containing your music files<br>
-          <small>💡 Supports MP3, WAV, M4A, FLAC and OGG files</small></p>
+          <small>Supports MP3, WAV, M4A, FLAC and OGG files</small></p>
 
         <!-- Manual file selection fallback -->
         <div style="margin-top: 15px;">
@@ -153,7 +181,7 @@
     </div>
 
     <!-- Game Settings -->
-    <div id="music-settings-section" class="hidden">
+    <div id="music-settings-section">
       <h3>Game Settings</h3>
       <div class="settings-grid">
         <div class="form-group">
@@ -274,6 +302,52 @@
           <p class="qr-instruction">Scan to join game:</p>
           <div id="qr-code"></div>
           <p class="qr-url" id="qr-url-text"></p>
+        </div>
+        <!-- LAN Connection Info (Desktop Only) -->
+        <div id="lan-connection-info" class="lan-connection-info desktop-only hidden">
+          <h4>LAN Connection</h4>
+          <p>Other players on the same network can join at:</p>
+          <div class="lan-url-display">
+            <code id="lan-url"></code>
+            <button class="btn btn-small btn-secondary" onclick="copyLanUrl()">Copy</button>
+          </div>
+          <p class="lan-hint">Make sure all players are connected to the same WiFi/network</p>
+        </div>
+        <!-- Hotspot Controls (Desktop Only) -->
+        <div id="hotspot-section" class="hotspot-section desktop-only hidden">
+          <h4>No WiFi Network?</h4>
+          <p>Create a hotspot for other players to connect directly to your computer:</p>
+          <div id="hotspot-controls">
+            <div id="hotspot-config" class="hotspot-config">
+              <div class="hotspot-input-group">
+                <label for="hotspot-ssid">Network Name:</label>
+                <input type="text" id="hotspot-ssid" value="FAM Music Quiz" maxlength="32">
+              </div>
+              <div class="hotspot-input-group">
+                <label for="hotspot-password">Password:</label>
+                <input type="text" id="hotspot-password" value="playmusic" minlength="8" maxlength="63">
+              </div>
+              <button id="hotspot-start-btn" class="btn btn-primary" onclick="startHotspot()">
+                Create Hotspot
+              </button>
+            </div>
+            <div id="hotspot-active" class="hotspot-active hidden">
+              <div class="hotspot-status">
+                <span class="hotspot-indicator"></span>
+                <strong>Hotspot Active</strong>
+              </div>
+              <div class="hotspot-credentials">
+                <p>Network: <code id="hotspot-active-ssid"></code></p>
+                <p>Password: <code id="hotspot-active-password"></code></p>
+              </div>
+              <p class="hotspot-instructions">Players should connect their device to this WiFi network, then open a browser and go to the LAN URL above.</p>
+              <button class="btn btn-danger btn-small" onclick="stopHotspot()">Stop Hotspot</button>
+            </div>
+            <div id="hotspot-manual" class="hotspot-manual hidden">
+              <p class="hotspot-manual-title">Manual Setup Required:</p>
+              <ul id="hotspot-instructions-list"></ul>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -635,10 +709,93 @@
         <button class="btn btn-secondary btn-small" onclick="addMusicLibraryFolder()">Add Folder</button>
       </div>
 
+      <!-- Server Settings Section -->
+      <div class="settings-section">
+        <h4>Multiplayer Server</h4>
+        <p class="settings-hint">Choose between local (LAN) or remote server for multiplayer</p>
+        <div class="server-mode-options">
+          <label class="server-mode-option">
+            <input type="radio" name="server-mode" value="local" id="server-mode-local" checked onchange="updateServerMode()">
+            <div class="mode-info">
+              <strong>Local Server (LAN)</strong>
+              <small>Host games on your local network. Other players connect to your IP.</small>
+            </div>
+          </label>
+          <label class="server-mode-option">
+            <input type="radio" name="server-mode" value="remote" id="server-mode-remote" onchange="updateServerMode()">
+            <div class="mode-info">
+              <strong>Remote Server (Internet)</strong>
+              <small>Connect to a deployed server for online play with anyone.</small>
+            </div>
+          </label>
+        </div>
+        <div class="remote-url-group" id="remote-url-group" style="display: none;">
+          <label for="remote-server-url">Remote Server URL:</label>
+          <input type="text" id="remote-server-url" class="settings-input" placeholder="https://your-server.com" onchange="updateRemoteUrl()">
+        </div>
+        <div id="server-restart-notice" class="restart-notice">
+          <p>Changes require app restart to take effect</p>
+          <button class="btn btn-primary btn-small" onclick="restartApp()">Restart Now</button>
+        </div>
+      </div>
+
       <!-- Updates Section -->
       <div class="settings-section">
         <h4>Updates</h4>
         <button class="btn btn-secondary btn-small" onclick="checkUpdates()">Check for Updates</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Offline Multiplayer Setup Modal (Desktop Only) -->
+<div id="offline-setup-modal" class="modal hidden">
+  <div class="modal-content offline-setup-content">
+    <div class="modal-header">
+      <h2>LAN Multiplayer Setup</h2>
+      <button class="close-btn" onclick="closeOfflineSetupModal()">&times;</button>
+    </div>
+    <div class="offline-setup-body">
+      <div class="offline-info">
+        <div class="offline-icon">📡</div>
+        <p>Play with friends on the same network - no internet required!</p>
+      </div>
+
+      <div class="offline-options">
+        <div class="offline-option">
+          <h4>Option 1: Same WiFi Network</h4>
+          <p>If all players are on the same WiFi, just proceed and share the game link.</p>
+          <button class="btn btn-primary" onclick="skipHotspotSetup()">
+            Continue to Game Setup
+          </button>
+        </div>
+
+        <div class="offline-divider">
+          <span>OR</span>
+        </div>
+
+        <div class="offline-option">
+          <h4>Option 2: Create Hotspot (No WiFi needed)</h4>
+          <p>Create a WiFi network from this computer. Others connect to it directly.</p>
+          <div class="hotspot-form">
+            <div class="form-group">
+              <label for="offline-hotspot-ssid">Network Name:</label>
+              <input type="text" id="offline-hotspot-ssid" value="FAM Music Quiz" maxlength="32" class="settings-input">
+            </div>
+            <div class="form-group">
+              <label for="offline-hotspot-password">Password:</label>
+              <input type="text" id="offline-hotspot-password" value="playmusic" minlength="8" maxlength="63" class="settings-input">
+            </div>
+          </div>
+          <button id="offline-proceed-btn" class="btn" onclick="proceedWithOfflineMultiplayer()">
+            Try Auto-Create Hotspot
+          </button>
+          <p class="hint-text">If auto-create fails, enable Mobile Hotspot manually in Windows Settings.</p>
+        </div>
+      </div>
+
+      <div class="offline-actions">
+        <button class="btn btn-secondary" onclick="closeOfflineSetupModal()">Cancel</button>
       </div>
     </div>
   </div>

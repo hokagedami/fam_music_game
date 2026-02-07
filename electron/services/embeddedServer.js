@@ -40,8 +40,91 @@ function isPortAvailable(port) {
       server.close();
       resolve(true);
     });
-    server.listen(port, '127.0.0.1');
+    server.listen(port, '0.0.0.0');
   });
+}
+
+/**
+ * Get the local network IP address
+ * Prioritizes hotspot/hosted network interfaces for offline multiplayer
+ * @returns {string} Local IP address or localhost
+ */
+function getLocalIpAddress() {
+  const { networkInterfaces } = require('os');
+  const nets = networkInterfaces();
+
+  // Common hotspot interface patterns
+  const hotspotPatterns = [
+    'Microsoft Hosted Network',
+    'Local Area Connection*',
+    'Hotspot',
+    'Mobile Hotspot',
+    'Wi-Fi Direct',
+    'vEthernet',
+    'ap0', // Linux AP mode
+    'wlan', // Linux wireless
+  ];
+
+  let hotspotIp = null;
+  let regularIp = null;
+
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name]) {
+      // Skip internal and non-IPv4 addresses
+      if (net.family === 'IPv4' && !net.internal) {
+        // Check if this looks like a hotspot interface
+        const isHotspot = hotspotPatterns.some(pattern =>
+          name.toLowerCase().includes(pattern.toLowerCase())
+        ) || net.address.startsWith('192.168.137.'); // Windows hosted network default
+
+        if (isHotspot) {
+          hotspotIp = net.address;
+        } else if (!regularIp) {
+          regularIp = net.address;
+        }
+      }
+    }
+  }
+
+  // Prefer hotspot IP, fall back to regular IP, then localhost
+  return hotspotIp || regularIp || '127.0.0.1';
+}
+
+/**
+ * Get all available network IPs (for display to user)
+ * @returns {Array<{name: string, address: string, isHotspot: boolean}>}
+ */
+function getAllNetworkIps() {
+  const { networkInterfaces } = require('os');
+  const nets = networkInterfaces();
+  const ips = [];
+
+  const hotspotPatterns = [
+    'Microsoft Hosted Network',
+    'Local Area Connection*',
+    'Hotspot',
+    'Mobile Hotspot',
+    'Wi-Fi Direct',
+    'vEthernet',
+  ];
+
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name]) {
+      if (net.family === 'IPv4' && !net.internal) {
+        const isHotspot = hotspotPatterns.some(pattern =>
+          name.toLowerCase().includes(pattern.toLowerCase())
+        ) || net.address.startsWith('192.168.137.');
+
+        ips.push({
+          name,
+          address: net.address,
+          isHotspot,
+        });
+      }
+    }
+  }
+
+  return ips;
 }
 
 export class EmbeddedServer {
@@ -96,7 +179,8 @@ export class EmbeddedServer {
         this.io = serverModule.io;
 
         await new Promise((resolve, reject) => {
-          this.server.listen(this.port, '127.0.0.1', () => {
+          // Bind to 0.0.0.0 to allow LAN connections
+          this.server.listen(this.port, '0.0.0.0', () => {
             resolve();
           });
           this.server.once('error', reject);
@@ -142,11 +226,46 @@ export class EmbeddedServer {
   }
 
   /**
-   * Get the server URL
+   * Get the server URL (localhost)
    * @returns {string} Server URL
    */
   getUrl() {
     return `http://127.0.0.1:${this.port}`;
+  }
+
+  /**
+   * Get the LAN URL for other devices to connect
+   * @returns {string} LAN URL
+   */
+  getLanUrl() {
+    const localIp = getLocalIpAddress();
+    return `http://${localIp}:${this.port}`;
+  }
+
+  /**
+   * Get the local IP address
+   * @returns {string} Local IP
+   */
+  getLocalIp() {
+    return getLocalIpAddress();
+  }
+
+  /**
+   * Get all available network IPs
+   * @returns {Array<{name: string, address: string, isHotspot: boolean}>}
+   */
+  getAllIps() {
+    return getAllNetworkIps();
+  }
+
+  /**
+   * Refresh and get updated LAN URL (call after hotspot starts)
+   * @returns {string} Updated LAN URL
+   */
+  refreshLanUrl() {
+    // Force re-detection of network interfaces
+    const ip = getLocalIpAddress();
+    return `http://${ip}:${this.port}`;
   }
 
   /**

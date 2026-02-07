@@ -70,6 +70,19 @@ const schema = {
     default: true,
   },
 
+  // Server mode: 'local' (embedded) or 'remote' (connect to deployed server)
+  serverMode: {
+    type: 'string',
+    enum: ['local', 'remote'],
+    default: 'local',
+  },
+
+  // Remote server URL (used when serverMode is 'remote')
+  remoteServerUrl: {
+    type: 'string',
+    default: '',
+  },
+
   // Last scanned music library (cached for faster startup)
   cachedMusicLibrary: {
     type: 'array',

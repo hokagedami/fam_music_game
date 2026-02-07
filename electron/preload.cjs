@@ -9,6 +9,10 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('electronAPI', {
   // Server URL
   getServerUrl: () => ipcRenderer.invoke('get-server-url'),
+  getLanUrl: () => ipcRenderer.invoke('get-lan-url'),
+  getLocalIp: () => ipcRenderer.invoke('get-local-ip'),
+  refreshLanUrl: () => ipcRenderer.invoke('refresh-lan-url'),
+  getAllNetworkIps: () => ipcRenderer.invoke('get-all-network-ips'),
 
   // Folder selection
   selectFolder: () => ipcRenderer.invoke('select-folder'),
@@ -71,6 +75,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openPath: (path) => ipcRenderer.invoke('open-path', path),
   showItemInFolder: (path) => ipcRenderer.invoke('show-item-in-folder', path),
 
+  // Server mode
+  getServerMode: () => ipcRenderer.invoke('get-server-mode'),
+  setServerMode: (mode, remoteUrl) => ipcRenderer.invoke('set-server-mode', mode, remoteUrl),
+  restartApp: () => ipcRenderer.invoke('restart-app'),
+
+  // Hotspot
+  hotspotCheckAvailability: () => ipcRenderer.invoke('hotspot-check-availability'),
+  hotspotStart: (ssid, password) => ipcRenderer.invoke('hotspot-start', ssid, password),
+  hotspotStop: () => ipcRenderer.invoke('hotspot-stop'),
+  hotspotStatus: () => ipcRenderer.invoke('hotspot-status'),
+
   // Platform info
   getPlatform: () => process.platform,
   isElectron: true,
@@ -78,3 +93,34 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
 // Log that preload script loaded
 console.log('Electron preload script loaded');
+
+// Add is-electron class to body as early as possible
+function addElectronClass() {
+  if (document.body) {
+    document.body.classList.add('is-electron');
+    // Also force show desktop-only elements (except those that should stay hidden until triggered)
+    document.querySelectorAll('.desktop-only:not(#update-banner)').forEach(el => {
+      el.style.setProperty('display', 'block', 'important');
+      el.classList.remove('hidden');
+    });
+    console.log('Added is-electron class and showed desktop elements');
+  }
+}
+
+// Try multiple times to ensure it runs
+if (document.body) {
+  addElectronClass();
+}
+document.addEventListener('DOMContentLoaded', addElectronClass);
+window.addEventListener('load', addElectronClass);
+
+// Also set up a MutationObserver to catch the body when it's added
+if (document.documentElement) {
+  const observer = new MutationObserver((mutations, obs) => {
+    if (document.body) {
+      addElectronClass();
+      obs.disconnect();
+    }
+  });
+  observer.observe(document.documentElement, { childList: true });
+}

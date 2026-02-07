@@ -19,6 +19,50 @@ export async function getServerUrl() {
 }
 
 /**
+ * Get the LAN URL for other devices to connect (Electron only)
+ * @returns {Promise<string|null>}
+ */
+export async function getLanUrl() {
+  if (!isElectron) {
+    return window.location.origin;
+  }
+  return await window.electronAPI.getLanUrl();
+}
+
+/**
+ * Get the local IP address (Electron only)
+ * @returns {Promise<string|null>}
+ */
+export async function getLocalIp() {
+  if (!isElectron) {
+    return null;
+  }
+  return await window.electronAPI.getLocalIp();
+}
+
+/**
+ * Refresh LAN URL after network changes (e.g., hotspot started)
+ * @returns {Promise<string|null>}
+ */
+export async function refreshLanUrl() {
+  if (!isElectron) {
+    return window.location.origin;
+  }
+  return await window.electronAPI.refreshLanUrl();
+}
+
+/**
+ * Get all available network IPs (Electron only)
+ * @returns {Promise<Array<{name: string, address: string, isHotspot: boolean}>>}
+ */
+export async function getAllNetworkIps() {
+  if (!isElectron) {
+    return [];
+  }
+  return await window.electronAPI.getAllNetworkIps();
+}
+
+/**
  * Open folder picker dialog (Electron only)
  * @returns {Promise<string|null>} Selected folder path or null
  */
@@ -294,10 +338,95 @@ export async function getLocalMusicPath() {
   return await window.electronAPI.getLocalMusicPath();
 }
 
+/**
+ * Get server mode settings (Electron only)
+ * @returns {Promise<{mode: string, remoteUrl: string, currentUrl: string}>}
+ */
+export async function getServerMode() {
+  if (!isElectron) {
+    return { mode: 'web', remoteUrl: '', currentUrl: window.location.origin };
+  }
+  return await window.electronAPI.getServerMode();
+}
+
+/**
+ * Set server mode (Electron only)
+ * @param {string} mode - 'local' or 'remote'
+ * @param {string} remoteUrl - Remote server URL (when mode is 'remote')
+ * @returns {Promise<{success: boolean, restartRequired: boolean}>}
+ */
+export async function setServerMode(mode, remoteUrl) {
+  if (!isElectron) {
+    return { success: false, restartRequired: false };
+  }
+  return await window.electronAPI.setServerMode(mode, remoteUrl);
+}
+
+/**
+ * Restart the app (Electron only)
+ */
+export async function restartApp() {
+  if (!isElectron) {
+    window.location.reload();
+    return;
+  }
+  return await window.electronAPI.restartApp();
+}
+
+/**
+ * Check if hotspot feature is available (Electron only)
+ * @returns {Promise<{available: boolean, reason?: string}>}
+ */
+export async function hotspotCheckAvailability() {
+  if (!isElectron) {
+    return { available: false, reason: 'Not running in Electron' };
+  }
+  return await window.electronAPI.hotspotCheckAvailability();
+}
+
+/**
+ * Start WiFi hotspot (Electron only)
+ * @param {string} ssid - Network name
+ * @param {string} password - Network password
+ * @returns {Promise<{success: boolean, error?: string, ssid?: string, password?: string}>}
+ */
+export async function hotspotStart(ssid, password) {
+  if (!isElectron) {
+    return { success: false, error: 'Not running in Electron' };
+  }
+  return await window.electronAPI.hotspotStart(ssid, password);
+}
+
+/**
+ * Stop WiFi hotspot (Electron only)
+ * @returns {Promise<{success: boolean, error?: string}>}
+ */
+export async function hotspotStop() {
+  if (!isElectron) {
+    return { success: false, error: 'Not running in Electron' };
+  }
+  return await window.electronAPI.hotspotStop();
+}
+
+/**
+ * Get hotspot status (Electron only)
+ * @returns {Promise<{isRunning: boolean, ssid: string, password: string}>}
+ */
+export async function hotspotStatus() {
+  if (!isElectron) {
+    return { isRunning: false, ssid: '', password: '' };
+  }
+  return await window.electronAPI.hotspotStatus();
+}
+
 // Export convenience object
 export const electronBridge = {
   isElectron,
   getServerUrl,
+  getLanUrl,
+  getLocalIp,
+  refreshLanUrl,
+  getAllNetworkIps,
   selectFolder,
   scanMusicFolder,
   onScanProgress,
@@ -320,6 +449,13 @@ export const electronBridge = {
   openPath,
   showItemInFolder,
   getLocalMusicPath,
+  getServerMode,
+  setServerMode,
+  restartApp,
+  hotspotCheckAvailability,
+  hotspotStart,
+  hotspotStop,
+  hotspotStatus,
 };
 
 export default electronBridge;

@@ -50,6 +50,8 @@ win:
         - x64
   icon: resources/icon.ico
   artifactName: "${productName}-${version}-${arch}-Setup.${ext}"
+  sign: false
+  signDlls: false
 
 # NSIS installer options
 nsis:

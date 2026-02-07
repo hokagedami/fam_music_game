@@ -10,6 +10,7 @@ import { scanMusicFolder } from '../services/musicScanner.js';
 import { downloadAndExtractZip } from '../services/zipDownloader.js';
 import { database } from '../services/database.js';
 import { checkForUpdates, installUpdate } from '../updater.js';
+import { hotspot } from '../services/hotspot.js';
 
 /**
  * Register all IPC handlers
@@ -18,9 +19,68 @@ import { checkForUpdates, installUpdate } from '../updater.js';
  * @param {EmbeddedServer} embeddedServer - Embedded server instance
  */
 export function registerIpcHandlers(ipcMain, mainWindow, embeddedServer) {
-  // Server URL
+  // Server URL and mode
   ipcMain.handle('get-server-url', () => {
     return global.serverUrl || embeddedServer?.getUrl() || 'http://127.0.0.1:3000';
+  });
+
+  ipcMain.handle('get-lan-url', () => {
+    if (global.serverMode === 'remote') {
+      return global.serverUrl; // Remote server URL
+    }
+    return embeddedServer?.getLanUrl() || null;
+  });
+
+  ipcMain.handle('get-local-ip', () => {
+    return embeddedServer?.getLocalIp() || null;
+  });
+
+  ipcMain.handle('refresh-lan-url', () => {
+    // Refresh network interfaces and return updated LAN URL
+    return embeddedServer?.refreshLanUrl() || null;
+  });
+
+  ipcMain.handle('get-all-network-ips', () => {
+    return embeddedServer?.getAllIps() || [];
+  });
+
+  ipcMain.handle('get-server-mode', () => {
+    return {
+      mode: settings.get('serverMode', 'local'),
+      remoteUrl: settings.get('remoteServerUrl', ''),
+      currentUrl: global.serverUrl,
+    };
+  });
+
+  ipcMain.handle('set-server-mode', (event, mode, remoteUrl) => {
+    settings.set('serverMode', mode);
+    if (remoteUrl !== undefined) {
+      settings.set('remoteServerUrl', remoteUrl);
+    }
+    // Return true to indicate restart is needed
+    return { success: true, restartRequired: true };
+  });
+
+  ipcMain.handle('restart-app', () => {
+    app.relaunch();
+    app.exit(0);
+  });
+
+  // Hotspot management
+  ipcMain.handle('hotspot-check-availability', async () => {
+    return await hotspot.checkAvailability();
+  });
+
+  ipcMain.handle('hotspot-start', async (event, ssid, password) => {
+    return await hotspot.start(ssid, password);
+  });
+
+  ipcMain.handle('hotspot-stop', async () => {
+    return await hotspot.stop();
+  });
+
+  ipcMain.handle('hotspot-status', () => {
+    return hotspot.getStatus();
   });
 
   // Folder selection

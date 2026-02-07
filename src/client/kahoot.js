@@ -106,6 +106,7 @@ export function preGenerateAllKahootOptions(songs, allMusicFiles = null) {
 
 /**
  * Get wrong answers for Kahoot options - ONLY titles from songs in the selected folder
+ * If there aren't enough unique songs, repeat from the pool to fill all slots
  * @param {Object} correctSong
  * @param {Array} allSongs
  * @param {number} count
@@ -115,14 +116,15 @@ export function preGenerateAllKahootOptions(songs, allMusicFiles = null) {
 function getWrongAnswers(correctSong, allSongs, count, songIndex) {
   const wrongAnswers = [];
   const usedAnswers = new Set();
-  const correctTitle = getSongTitle(correctSong).toLowerCase();
-  usedAnswers.add(correctTitle);
+  const correctTitleOriginal = getSongTitle(correctSong);
+  const correctTitleLower = correctTitleOriginal.toLowerCase();
+  usedAnswers.add(correctTitleLower);
 
   // Get other songs from the folder, excluding the correct song
   const otherSongs = allSongs.filter((song, idx) => {
     if (songIndex >= 0 && idx === songIndex) return false;
     const songTitle = getSongTitle(song).toLowerCase();
-    return songTitle !== correctTitle && songTitle !== 'unknown';
+    return songTitle !== correctTitleLower && songTitle !== 'unknown';
   });
 
   // Shuffle to randomize which songs are picked for each question
@@ -137,6 +139,28 @@ function getWrongAnswers(correctSong, allSongs, count, songIndex) {
       usedAnswers.add(titleLower);
       wrongAnswers.push(title);
     }
+  }
+
+  // If we don't have enough unique wrong answers, repeat from the pool
+  // This handles cases where fewer than 4 songs are in the library
+  if (wrongAnswers.length < count && otherSongs.length > 0) {
+    let repeatIndex = 0;
+    while (wrongAnswers.length < count) {
+      const song = otherSongs[repeatIndex % otherSongs.length];
+      const title = getSongTitle(song);
+      if (title && title.toLowerCase() !== 'unknown') {
+        wrongAnswers.push(title);
+      }
+      repeatIndex++;
+      // Safety: prevent infinite loop if all songs are 'unknown'
+      if (repeatIndex >= otherSongs.length * count) break;
+    }
+  }
+
+  // If still not enough (e.g., only 1 song total), use the correct song title as filler
+  // This is a fallback - user should have at least 2 songs for a meaningful game
+  while (wrongAnswers.length < count) {
+    wrongAnswers.push(correctTitleOriginal);
   }
 
   return wrongAnswers.slice(0, count);

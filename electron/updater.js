@@ -3,7 +3,8 @@
  * Manages automatic updates via electron-updater with GitHub Releases
  */
 
-import { autoUpdater } from 'electron-updater';
+import pkg from 'electron-updater';
+const { autoUpdater } = pkg;
 import { app } from 'electron';
 import { settings } from './services/settings.js';
 

@@ -91,6 +91,7 @@ function setupMultiplayerUI() {
   const songsCountSelect = getElementById('songs-count');
   const clipDurationSelect = getElementById('clip-duration');
   const startButton = getElementById('start-game-button');
+  const maxPlayersGroup = getElementById('max-players-group');
 
   if (songsCountSelect) {
     songsCountSelect.value = '10';
@@ -102,6 +103,11 @@ function setupMultiplayerUI() {
 
   if (startButton) {
     startButton.disabled = state.musicFiles.length === 0;
+  }
+
+  // Show max players option in multiplayer mode
+  if (maxPlayersGroup) {
+    maxPlayersGroup.style.display = '';
   }
 }
 

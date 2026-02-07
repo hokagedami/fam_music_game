@@ -115,33 +115,59 @@ export function updateHeader() {
 // =========================
 
 export function updateConnectionStatus() {
-  const statusEl = getElementById('connection-status');
-  const statusText = getElementById('status-text');
-  const statusDot = querySelector('.status-dot');
+  // Update all connection status elements
+  const statusContainers = document.querySelectorAll('#connection-status, #setup-connection-status, .connection-status-indicator');
 
-  if (!statusEl || !statusText || !statusDot) return;
+  statusContainers.forEach(container => {
+    const statusText = container.querySelector('#status-text') || container.querySelector('.status-text');
+    const statusDot = container.querySelector('.status-dot');
 
-  // Remove all status classes
-  statusDot.classList.remove('connected', 'connecting', 'disconnected', 'error');
+    // Handle the game-status bar connection-status (emoji-based)
+    if (container.id === 'connection-status' && !statusDot) {
+      switch (state.connectionStatus) {
+        case 'connected':
+          container.textContent = '🟢 Online';
+          container.classList.remove('offline');
+          container.classList.add('online');
+          break;
+        case 'connecting':
+          container.textContent = '🟡 Connecting...';
+          container.classList.remove('online', 'offline');
+          break;
+        case 'disconnected':
+        case 'error':
+          container.textContent = '🔴 Offline';
+          container.classList.remove('online');
+          container.classList.add('offline');
+          break;
+      }
+      return;
+    }
 
-  switch (state.connectionStatus) {
-    case 'connected':
-      statusDot.classList.add('connected');
-      statusText.textContent = 'Connected';
-      break;
-    case 'connecting':
-      statusDot.classList.add('connecting');
-      statusText.textContent = 'Connecting...';
-      break;
-    case 'disconnected':
-      statusDot.classList.add('disconnected');
-      statusText.textContent = 'Disconnected';
-      break;
-    case 'error':
-      statusDot.classList.add('error');
-      statusText.textContent = 'Connection Error';
-      break;
-  }
+    // Handle structured connection status (dot + text)
+    if (statusDot) {
+      statusDot.classList.remove('connected', 'connecting', 'disconnected', 'error');
+    }
+
+    switch (state.connectionStatus) {
+      case 'connected':
+        if (statusDot) statusDot.classList.add('connected');
+        if (statusText) statusText.textContent = 'Connected';
+        break;
+      case 'connecting':
+        if (statusDot) statusDot.classList.add('connecting');
+        if (statusText) statusText.textContent = 'Connecting...';
+        break;
+      case 'disconnected':
+        if (statusDot) statusDot.classList.add('disconnected');
+        if (statusText) statusText.textContent = 'Disconnected';
+        break;
+      case 'error':
+        if (statusDot) statusDot.classList.add('error');
+        if (statusText) statusText.textContent = 'Connection Error';
+        break;
+    }
+  });
 }
 
 // =========================
@@ -224,6 +250,16 @@ export function updateLobbyDisplay() {
     const nonHostPlayers = state.gameSession.players.filter((p) => !p.isHost);
     startBtn.disabled = nonHostPlayers.length === 0;
   }
+
+  // Update LAN connection info for desktop app (only for host)
+  if (state.currentPlayer?.isHost && typeof window.updateLanConnectionInfo === 'function') {
+    window.updateLanConnectionInfo();
+  }
+
+  // Initialize hotspot section for desktop app (only for host)
+  if (state.currentPlayer?.isHost && typeof window.initHotspotSection === 'function') {
+    window.initHotspotSection();
+  }
 }
 
 // =========================
@@ -257,25 +293,32 @@ export function updateGameDisplay() {
 // =========================
 
 export function updateSinglePlayerDisplay() {
-  const scoreEl = getElementById('single-player-score');
-  const songNumberEl = getElementById('single-song-number');
-  const totalSongsEl = getElementById('single-total-songs');
-  const streakEl = getElementById('single-streak');
-
+  // Update score display
+  const scoreEl = getElementById('current-score');
   if (scoreEl) {
     scoreEl.textContent = String(state.singlePlayerScore);
   }
 
+  // Update song progress
+  const songNumberEl = getElementById('current-song-num');
   if (songNumberEl) {
     songNumberEl.textContent = String(state.singlePlayerCurrentSong + 1);
   }
 
+  const totalSongsEl = getElementById('total-songs');
   if (totalSongsEl) {
     totalSongsEl.textContent = String(state.singlePlayerSongs.length);
   }
 
-  if (streakEl) {
-    streakEl.textContent = String(state.singlePlayerCurrentStreak);
+  // Update streak display
+  const currentStreakEl = getElementById('current-streak');
+  if (currentStreakEl) {
+    currentStreakEl.textContent = String(state.singlePlayerCurrentStreak);
+  }
+
+  const bestStreakEl = getElementById('best-streak');
+  if (bestStreakEl) {
+    bestStreakEl.textContent = String(state.singlePlayerBestStreak);
   }
 }
 
@@ -403,9 +446,12 @@ export function forceHideScoreboard() {
 // =========================
 
 export function displayMusicFileList(source) {
-  const listId = source === 'single' ? 'single-music-list' : 'multiplayer-music-list';
-  const listEl = getElementById(listId);
+  // Use the main file list element (shared between single/multiplayer)
+  const listEl = getElementById('music-file-list');
   if (!listEl) return;
+
+  // Make the list visible
+  listEl.classList.remove('hidden');
 
   const files = state.musicFiles;
   listEl.innerHTML = '';

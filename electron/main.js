@@ -35,7 +35,7 @@ async function createWindow() {
     minWidth: 800,
     minHeight: 600,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false, // Required for preload script to work with ESM
@@ -46,13 +46,25 @@ async function createWindow() {
     backgroundColor: '#1a1a2e',
   });
 
-  // Start embedded server
-  embeddedServer = new EmbeddedServer();
-  const serverUrl = await embeddedServer.start();
-  console.log(`Embedded server started at: ${serverUrl}`);
+  // Check server mode setting
+  const serverMode = settings.get('serverMode', 'local');
+  const remoteServerUrl = settings.get('remoteServerUrl', '');
+  let serverUrl;
 
-  // Store server URL for IPC access
+  if (serverMode === 'remote' && remoteServerUrl) {
+    // Use remote server - don't start embedded server
+    serverUrl = remoteServerUrl;
+    console.log(`Using remote server: ${serverUrl}`);
+  } else {
+    // Start embedded server for local mode
+    embeddedServer = new EmbeddedServer();
+    serverUrl = await embeddedServer.start();
+    console.log(`Embedded server started at: ${serverUrl}`);
+  }
+
+  // Store server URL and mode for IPC access
   global.serverUrl = serverUrl;
+  global.serverMode = serverMode;
 
   // Load the app
   mainWindow.loadURL(serverUrl);
@@ -89,10 +101,8 @@ async function createWindow() {
   // Register IPC handlers
   registerIpcHandlers(ipcMain, mainWindow, embeddedServer);
 
-  // Open DevTools in development
-  if (process.env.NODE_ENV === 'development') {
-    mainWindow.webContents.openDevTools();
-  }
+  // Uncomment to open DevTools for debugging
+  // mainWindow.webContents.openDevTools();
 }
 
 // App lifecycle events
