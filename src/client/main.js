@@ -53,6 +53,23 @@ async function initDesktopFeatures() {
     el.style.display = 'block';
   });
 
+  // Setup update notification buttons
+  const updateActionBtn = getElementById('update-action-btn');
+  const dismissUpdateBtn = getElementById('dismiss-update-btn');
+
+  if (updateActionBtn) {
+    updateActionBtn.addEventListener('click', () => {
+      electronBridge.installUpdate();
+    });
+  }
+
+  if (dismissUpdateBtn) {
+    dismissUpdateBtn.addEventListener('click', () => {
+      const banner = getElementById('update-banner');
+      if (banner) banner.classList.add('hidden');
+    });
+  }
+
   // Setup update notifications
   electronBridge.onUpdateEvent('available', (data) => {
     showUpdateNotification('available', data);
@@ -101,7 +118,6 @@ function showUpdateNotification(type, data) {
     if (button) {
       button.textContent = 'Restart to Update';
       button.disabled = false;
-      button.onclick = () => electronBridge.installUpdate();
     }
   }
 
