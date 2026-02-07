@@ -12,6 +12,8 @@ import { app } from 'electron';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const REMOTE_SERVER_URL = 'https://fam-music-app-7jsn7.ondigitalocean.app';
+
 /**
  * Find an available port in a range
  * @param {number} startPort - Starting port
@@ -126,6 +128,22 @@ function getAllNetworkIps() {
   }
 
   return ips;
+}
+
+/**
+ * Check if the remote server is reachable
+ * @returns {Promise<{online: boolean, url: string}>}
+ */
+async function checkRemoteServer() {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch(`${REMOTE_SERVER_URL}/api/health`, { signal: controller.signal });
+    clearTimeout(timeout);
+    return { online: res.ok, url: REMOTE_SERVER_URL };
+  } catch {
+    return { online: false, url: REMOTE_SERVER_URL };
+  }
 }
 
 export class EmbeddedServer {
@@ -287,6 +305,11 @@ export class EmbeddedServer {
   running() {
     return this.isRunning;
   }
+
+  static checkRemoteServer() {
+    return checkRemoteServer();
+  }
 }
 
+export { REMOTE_SERVER_URL };
 export default EmbeddedServer;

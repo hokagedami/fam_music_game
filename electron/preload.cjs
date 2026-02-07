@@ -77,7 +77,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Server mode
   getServerMode: () => ipcRenderer.invoke('get-server-mode'),
-  setServerMode: (mode, remoteUrl) => ipcRenderer.invoke('set-server-mode', mode, remoteUrl),
+  setServerMode: (mode) => ipcRenderer.invoke('set-server-mode', mode),
+  checkRemoteServer: () => ipcRenderer.invoke('check-remote-server'),
   restartApp: () => ipcRenderer.invoke('restart-app'),
 
   // Hotspot

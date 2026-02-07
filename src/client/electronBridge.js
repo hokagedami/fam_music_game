@@ -340,11 +340,11 @@ export async function getLocalMusicPath() {
 
 /**
  * Get server mode settings (Electron only)
- * @returns {Promise<{mode: string, remoteUrl: string, currentUrl: string}>}
+ * @returns {Promise<{mode: string, currentUrl: string}>}
  */
 export async function getServerMode() {
   if (!isElectron) {
-    return { mode: 'web', remoteUrl: '', currentUrl: window.location.origin };
+    return { mode: 'web', currentUrl: window.location.origin };
   }
   return await window.electronAPI.getServerMode();
 }
@@ -352,14 +352,24 @@ export async function getServerMode() {
 /**
  * Set server mode (Electron only)
  * @param {string} mode - 'local' or 'remote'
- * @param {string} remoteUrl - Remote server URL (when mode is 'remote')
  * @returns {Promise<{success: boolean, restartRequired: boolean}>}
  */
-export async function setServerMode(mode, remoteUrl) {
+export async function setServerMode(mode) {
   if (!isElectron) {
     return { success: false, restartRequired: false };
   }
-  return await window.electronAPI.setServerMode(mode, remoteUrl);
+  return await window.electronAPI.setServerMode(mode);
+}
+
+/**
+ * Check if the remote server is online (Electron only)
+ * @returns {Promise<{online: boolean, url: string}>}
+ */
+export async function checkRemoteServer() {
+  if (!isElectron) {
+    return { online: false, url: '' };
+  }
+  return await window.electronAPI.checkRemoteServer();
 }
 
 /**
@@ -451,6 +461,7 @@ export const electronBridge = {
   getLocalMusicPath,
   getServerMode,
   setServerMode,
+  checkRemoteServer,
   restartApp,
   hotspotCheckAvailability,
   hotspotStart,

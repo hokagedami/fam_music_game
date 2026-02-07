@@ -797,32 +797,21 @@
         <button class="btn btn-secondary btn-small" onclick="addMusicLibraryFolder()">Add Folder</button>
       </div>
 
-      <!-- Server Settings Section -->
+      <!-- Online Server Section -->
       <div class="settings-section">
-        <h4>Multiplayer Server</h4>
-        <p class="settings-hint">Choose between local (LAN) or remote server for multiplayer</p>
-        <div class="server-mode-options">
-          <label class="server-mode-option">
-            <input type="radio" name="server-mode" value="local" id="server-mode-local" checked onchange="updateServerMode()">
-            <div class="mode-info">
-              <strong>Local Server (LAN)</strong>
-              <small>Host games on your local network. Other players connect to your IP.</small>
-            </div>
-          </label>
-          <label class="server-mode-option">
-            <input type="radio" name="server-mode" value="remote" id="server-mode-remote" onchange="updateServerMode()">
-            <div class="mode-info">
-              <strong>Remote Server (Internet)</strong>
-              <small>Connect to a deployed server for online play with anyone.</small>
-            </div>
-          </label>
+        <h4>Online Server</h4>
+        <div class="server-status-row" id="server-status-row">
+          <span class="status-dot" id="server-status-dot"></span>
+          <span id="server-status-text">Checking...</span>
         </div>
-        <div class="remote-url-group" id="remote-url-group" style="display: none;">
-          <label for="remote-server-url">Remote Server URL:</label>
-          <input type="text" id="remote-server-url" class="settings-input" placeholder="https://your-server.com" onchange="updateRemoteUrl()">
-        </div>
-        <div id="server-restart-notice" class="restart-notice">
-          <p>Changes require app restart to take effect</p>
+        <label class="toggle-switch-label">
+          <input type="checkbox" id="online-mode-toggle" onchange="toggleOnlineMode()">
+          <span class="toggle-switch-slider"></span>
+          <span>Use online server for multiplayer</span>
+        </label>
+        <p class="settings-hint" id="online-mode-hint">When enabled, connects to the online server for internet multiplayer.</p>
+        <div id="server-restart-notice" class="restart-notice" style="display:none">
+          <p>Restart required to apply changes</p>
           <button class="btn btn-primary btn-small" onclick="restartApp()">Restart Now</button>
         </div>
       </div>

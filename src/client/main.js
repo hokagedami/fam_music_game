@@ -446,29 +446,27 @@ async function loadSettingsUI() {
     });
   }
 
-  // Load server mode settings
+  // Load online server status and toggle
   const serverModeData = await electronBridge.getServerMode();
-  const localRadio = getElementById('server-mode-local');
-  const remoteRadio = getElementById('server-mode-remote');
-  const remoteUrlInput = getElementById('remote-server-url');
-  const remoteUrlGroup = getElementById('remote-url-group');
+  const onlineToggle = getElementById('online-mode-toggle');
+  if (onlineToggle) {
+    onlineToggle.checked = serverModeData.mode === 'remote';
+  }
 
-  if (localRadio && remoteRadio) {
-    if (serverModeData.mode === 'remote') {
-      remoteRadio.checked = true;
-      localRadio.checked = false;
+  // Check remote server status
+  const statusDot = getElementById('server-status-dot');
+  const statusText = getElementById('server-status-text');
+  if (statusDot && statusText) {
+    statusDot.className = 'status-dot';
+    statusText.textContent = 'Checking...';
+    const result = await electronBridge.checkRemoteServer();
+    if (result.online) {
+      statusDot.classList.add('online');
+      statusText.textContent = 'Online server is reachable';
     } else {
-      localRadio.checked = true;
-      remoteRadio.checked = false;
+      statusDot.classList.add('offline');
+      statusText.textContent = 'Online server is unreachable';
     }
-  }
-
-  if (remoteUrlInput) {
-    remoteUrlInput.value = serverModeData.remoteUrl || '';
-  }
-
-  if (remoteUrlGroup) {
-    remoteUrlGroup.style.display = serverModeData.mode === 'remote' ? 'block' : 'none';
   }
 
   // Hide restart notice initially
@@ -656,40 +654,15 @@ async function checkUpdates() {
 }
 
 /**
- * Update server mode setting
+ * Toggle between local and online server mode
  */
-async function updateServerMode() {
+async function toggleOnlineMode() {
   if (!electronBridge.isElectron) return;
 
-  const localRadio = getElementById('server-mode-local');
-  const mode = localRadio?.checked ? 'local' : 'remote';
-  const remoteUrlInput = getElementById('remote-server-url');
-  const remoteUrl = remoteUrlInput?.value?.trim() || '';
+  const toggle = getElementById('online-mode-toggle');
+  const mode = toggle?.checked ? 'remote' : 'local';
 
-  // Toggle remote URL field visibility
-  const remoteUrlGroup = getElementById('remote-url-group');
-  if (remoteUrlGroup) {
-    remoteUrlGroup.style.display = mode === 'remote' ? 'block' : 'none';
-  }
-
-  // Show restart notice
-  const restartNotice = getElementById('server-restart-notice');
-  if (restartNotice) {
-    restartNotice.style.display = 'block';
-  }
-
-  await electronBridge.setServerMode(mode, remoteUrl);
-}
-
-/**
- * Update remote server URL
- */
-async function updateRemoteUrl() {
-  if (!electronBridge.isElectron) return;
-
-  const remoteUrlInput = getElementById('remote-server-url');
-  const remoteUrl = remoteUrlInput?.value?.trim() || '';
-  await electronBridge.setServerMode('remote', remoteUrl);
+  await electronBridge.setServerMode(mode);
 
   // Show restart notice
   const restartNotice = getElementById('server-restart-notice');
@@ -1185,8 +1158,7 @@ window.scanMusicLibrary = scanMusicLibrary;
 window.downloadMusicFromUrl = downloadMusicFromUrl;
 window.clearHistory = clearHistory;
 window.checkUpdates = checkUpdates;
-window.updateServerMode = updateServerMode;
-window.updateRemoteUrl = updateRemoteUrl;
+window.toggleOnlineMode = toggleOnlineMode;
 window.restartApp = restartApp;
 window.isElectron = electronBridge.isElectron;
 

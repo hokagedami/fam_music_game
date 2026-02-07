@@ -6,7 +6,7 @@
 import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { EmbeddedServer } from './services/embeddedServer.js';
+import { EmbeddedServer, REMOTE_SERVER_URL } from './services/embeddedServer.js';
 import { registerIpcHandlers } from './ipc/handlers.js';
 import { setupAutoUpdater } from './updater.js';
 import { settings } from './services/settings.js';
@@ -48,12 +48,11 @@ async function createWindow() {
 
   // Check server mode setting
   const serverMode = settings.get('serverMode', 'local');
-  const remoteServerUrl = settings.get('remoteServerUrl', '');
   let serverUrl;
 
-  if (serverMode === 'remote' && remoteServerUrl) {
+  if (serverMode === 'remote') {
     // Use remote server - don't start embedded server
-    serverUrl = remoteServerUrl;
+    serverUrl = REMOTE_SERVER_URL;
     console.log(`Using remote server: ${serverUrl}`);
   } else {
     // Start embedded server for local mode

@@ -11,6 +11,7 @@ import { downloadAndExtractZip } from '../services/zipDownloader.js';
 import { database } from '../services/database.js';
 import { checkForUpdates, installUpdate } from '../updater.js';
 import { hotspot } from '../services/hotspot.js';
+import { EmbeddedServer } from '../services/embeddedServer.js';
 
 /**
  * Register all IPC handlers
@@ -47,18 +48,17 @@ export function registerIpcHandlers(ipcMain, mainWindow, embeddedServer) {
   ipcMain.handle('get-server-mode', () => {
     return {
       mode: settings.get('serverMode', 'local'),
-      remoteUrl: settings.get('remoteServerUrl', ''),
       currentUrl: global.serverUrl,
     };
   });
 
-  ipcMain.handle('set-server-mode', (event, mode, remoteUrl) => {
+  ipcMain.handle('set-server-mode', (event, mode) => {
     settings.set('serverMode', mode);
-    if (remoteUrl !== undefined) {
-      settings.set('remoteServerUrl', remoteUrl);
-    }
-    // Return true to indicate restart is needed
     return { success: true, restartRequired: true };
+  });
+
+  ipcMain.handle('check-remote-server', async () => {
+    return await EmbeddedServer.checkRemoteServer();
   });
 
   ipcMain.handle('restart-app', () => {
