@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Music Quiz Game</title>
-  <link rel="stylesheet" href="styles.css?v=4">
+  <link rel="stylesheet" href="styles.css?v=5">
   <!-- Socket.IO is bundled in the TypeScript client, no CDN needed -->
   <!-- jsmediatags for audio metadata extraction -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
@@ -41,8 +41,8 @@
 
   <div class="header">
     <div class="header-content">
-      <h1 id="main-title">Music Quiz Game</h1>
-      <p id="main-subtitle">Test your music knowledge solo or with friends</p>
+      <h1 id="main-title">Music Quiz Odyssey</h1>
+      <p id="main-subtitle">Embark on a journey of sound!</p>
     </div>
     <!-- Settings Button (Desktop Only) -->
     <button id="settings-btn" class="btn btn-secondary settings-btn desktop-only hidden" onclick="openSettings()">
@@ -95,31 +95,54 @@
     </div>
 
     <!-- Game Mode Selection -->
-    <div class="game-modes">
-      <div class="option-card single-player">
-        <h3>Single Player</h3>
-        <p>Practice your music knowledge offline. Perfect for solo sessions and testing your skills!</p>
-        <button class="btn" onclick="startSinglePlayerMode()">Play Solo</button>
-      </div>
+    <div class="game-modes-wrapper">
+      <!-- Decorative elements -->
+      <div class="decor decor-note decor-1">♪</div>
+      <div class="decor decor-note decor-2">♫</div>
+      <div class="decor decor-shape decor-3">△</div>
+      <div class="decor decor-shape decor-4">○</div>
+      <div class="decor decor-shape decor-5">▷</div>
 
-      <div class="option-card multiplayer">
-        <h3>Create Multiplayer Game</h3>
-        <p>Host a new music quiz game. Load your music collection and invite friends to join!</p>
-        <button class="btn" onclick="startMultiplayer()">Create Game</button>
-      </div>
+      <div class="game-modes">
+        <div class="option-card single-player">
+          <h3>Single Player</h3>
+          <p>Practice your music knowledge offline. Perfect for solo sessions and testing your skills!</p>
+          <button class="btn" onclick="startSinglePlayerMode()">Play Solo</button>
+          <div class="card-icon">
+            <span class="icon-circle icon-user">👤</span>
+            <span class="icon-circle icon-stats">📊</span>
+          </div>
+        </div>
 
-      <div class="option-card multiplayer">
-        <h3>Join Multiplayer Game</h3>
-        <p>Join an existing game using a Game ID shared by the host.</p>
-        <button class="btn btn-secondary" onclick="showJoinGame()">Join Game</button>
-      </div>
+        <div class="option-card multiplayer create-game">
+          <div class="card-icon-top">🎧</div>
+          <h3>Create Multiplayer Game</h3>
+          <p>Host a new music quiz game. Load your music collection and invite friends to join!</p>
+          <button class="btn" onclick="startMultiplayer()">Create Game</button>
+          <div class="card-icon">
+            <span class="icon-circle icon-group">👥</span>
+          </div>
+        </div>
 
-      <!-- Offline Multiplayer (Desktop Only) -->
-      <div class="option-card offline-multiplayer desktop-only hidden">
-        <div class="offline-badge">No Internet Needed</div>
-        <h3>Offline Multiplayer</h3>
-        <p>Create a WiFi hotspot and play with friends nearby. No internet or existing network required!</p>
-        <button class="btn" onclick="startOfflineMultiplayer()">Play Offline</button>
+        <div class="option-card multiplayer join-game">
+          <h3>Join Multiplayer Game</h3>
+          <p>Join an existing game using a Game ID shared by the host.</p>
+          <button class="btn" onclick="showJoinGame()">Join Game</button>
+          <div class="card-icon">
+            <span class="icon-circle icon-target">🎯</span>
+          </div>
+        </div>
+
+        <!-- Offline Multiplayer (Desktop Only) -->
+        <div class="option-card offline-multiplayer desktop-only hidden">
+          <div class="offline-badge">No Internet Needed</div>
+          <h3>Offline Multiplayer</h3>
+          <p>Create a WiFi hotspot and play with friends nearby. No internet or existing network required!</p>
+          <button class="btn" onclick="startOfflineMultiplayer()">Play Offline</button>
+          <div class="card-icon">
+            <span class="icon-circle icon-wifi">📡</span>
+          </div>
+        </div>
       </div>
     </div>
 
