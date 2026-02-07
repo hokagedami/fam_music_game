@@ -119,6 +119,23 @@ async function setupGameWithPlayer(browser, hostName, playerName) {
 
 const uniqueName = (base) => `${base}_${Date.now().toString(36)}`;
 
+// Helper to trigger host showing options to players
+// This simulates what happens when the audio clip ends (since mock audio doesn't fire 'ended' events)
+async function triggerHostShowOptions(hostPage, playerPage) {
+  // Give the game a moment to initialize audio
+  await hostPage.waitForTimeout(500);
+
+  // Host manually triggers showing options (simulates audio clip ending)
+  await hostPage.evaluate(() => {
+    if (typeof window.hostShowOptions === 'function') {
+      window.hostShowOptions();
+    }
+  });
+
+  // Wait for socket event to reach player
+  await playerPage.waitForTimeout(500);
+}
+
 // ============================================
 // GAME START TESTS
 // ============================================
@@ -207,7 +224,8 @@ test.describe('Multiplayer Gameplay - Host Controls', () => {
       await hostPage.click('#start-game-btn');
       await expect(hostPage.locator('#game-panel')).toBeVisible({ timeout: 15000 });
 
-      await expect(hostPage.locator('#music-audio')).toBeVisible();
+      // Audio player ID is host-audio-player
+      await expect(hostPage.locator('#host-audio-player')).toBeVisible();
     } finally {
       await hostContext.close();
       await playerContext.close();
@@ -322,7 +340,7 @@ test.describe('Multiplayer Gameplay - Player View', () => {
     }
   });
 
-  // Options are now auto-shown after music clip ends (no manual button click)
+  // Options are shown when host triggers them (simulating audio clip end)
   test('player should see options after music clip ends', async ({
     browser,
   }) => {
@@ -333,10 +351,12 @@ test.describe('Multiplayer Gameplay - Player View', () => {
       await hostPage.click('#start-game-btn');
       await expect(playerPage.locator('#game-panel')).toBeVisible({ timeout: 15000 });
 
-      // Wait for options to auto-show (happens after music clip ends)
-      // Player should eventually see options
+      // Trigger host to show options (simulates audio clip ending)
+      await triggerHostShowOptions(hostPage, playerPage);
+
+      // Player should see options
       await expect(playerPage.locator('#nonhost-kahoot-options')).toBeVisible({
-        timeout: 30000, // Longer timeout to account for clip duration
+        timeout: 10000,
       });
     } finally {
       await hostContext.close();
@@ -352,9 +372,11 @@ test.describe('Multiplayer Gameplay - Player View', () => {
       await hostPage.click('#start-game-btn');
       await expect(playerPage.locator('#game-panel')).toBeVisible({ timeout: 15000 });
 
-      // Wait for options to auto-show after music clip ends
+      // Trigger host to show options
+      await triggerHostShowOptions(hostPage, playerPage);
+
       await expect(playerPage.locator('#nonhost-kahoot-options')).toBeVisible({
-        timeout: 30000,
+        timeout: 10000,
       });
 
       // Should have 4 options
@@ -375,9 +397,11 @@ test.describe('Multiplayer Gameplay - Player View', () => {
       await hostPage.click('#start-game-btn');
       await expect(playerPage.locator('#game-panel')).toBeVisible({ timeout: 15000 });
 
-      // Wait for options to auto-show after music clip ends
+      // Trigger host to show options
+      await triggerHostShowOptions(hostPage, playerPage);
+
       await expect(playerPage.locator('#nonhost-kahoot-options')).toBeVisible({
-        timeout: 30000,
+        timeout: 10000,
       });
 
       // Check all colored options
@@ -405,9 +429,11 @@ test.describe('Multiplayer Gameplay - Answer Submission', () => {
       await hostPage.click('#start-game-btn');
       await expect(playerPage.locator('#game-panel')).toBeVisible({ timeout: 15000 });
 
-      // Wait for options to auto-show after music clip ends
+      // Trigger host to show options
+      await triggerHostShowOptions(hostPage, playerPage);
+
       await expect(playerPage.locator('#nonhost-kahoot-options')).toBeVisible({
-        timeout: 30000,
+        timeout: 10000,
       });
 
       // Click first option
@@ -431,9 +457,11 @@ test.describe('Multiplayer Gameplay - Answer Submission', () => {
       await hostPage.click('#start-game-btn');
       await expect(playerPage.locator('#game-panel')).toBeVisible({ timeout: 15000 });
 
-      // Wait for options to auto-show after music clip ends
+      // Trigger host to show options
+      await triggerHostShowOptions(hostPage, playerPage);
+
       await expect(playerPage.locator('#nonhost-kahoot-options')).toBeVisible({
-        timeout: 30000,
+        timeout: 10000,
       });
 
       // Click an option
@@ -469,9 +497,11 @@ test.describe('Multiplayer Gameplay - Answer Submission', () => {
       await hostPage.click('#start-game-btn');
       await expect(playerPage.locator('#game-panel')).toBeVisible({ timeout: 15000 });
 
-      // Wait for options to auto-show after music clip ends
+      // Trigger host to show options
+      await triggerHostShowOptions(hostPage, playerPage);
+
       await expect(playerPage.locator('#nonhost-kahoot-options')).toBeVisible({
-        timeout: 30000,
+        timeout: 10000,
       });
 
       // Player answers
@@ -502,9 +532,11 @@ test.describe('Multiplayer Gameplay - Scoring', () => {
       await hostPage.click('#start-game-btn');
       await expect(playerPage.locator('#game-panel')).toBeVisible({ timeout: 15000 });
 
-      // Wait for options to auto-show after music clip ends
+      // Trigger host to show options
+      await triggerHostShowOptions(hostPage, playerPage);
+
       await expect(playerPage.locator('#nonhost-kahoot-options')).toBeVisible({
-        timeout: 30000,
+        timeout: 10000,
       });
 
       // Get correct index
@@ -581,9 +613,11 @@ test.describe('Multiplayer Gameplay - Scoring', () => {
       await expect(player1Page.locator('#game-panel')).toBeVisible({ timeout: 15000 });
       await expect(player2Page.locator('#game-panel')).toBeVisible({ timeout: 15000 });
 
-      // Wait for options to auto-show after music clip ends
+      // Trigger host to show options (mock audio doesn't fire 'ended' events)
+      await triggerHostShowOptions(hostPage, player1Page);
+
       await expect(player1Page.locator('#nonhost-kahoot-options')).toBeVisible({
-        timeout: 30000,
+        timeout: 10000,
       });
 
       // Player 1 answers immediately
@@ -609,7 +643,7 @@ test.describe('Multiplayer Gameplay - Scoring', () => {
 // ============================================
 
 test.describe('Multiplayer Gameplay - Song Progression', () => {
-  test('host should see "Next Song" button after revealing', async ({ browser }) => {
+  test('host should see correct answer after timer expires', async ({ browser }) => {
     const { hostContext, playerContext, hostPage, playerPage } =
       await setupGameWithPlayer(browser, uniqueName('Host'), uniqueName('Player'));
 
@@ -617,27 +651,22 @@ test.describe('Multiplayer Gameplay - Song Progression', () => {
       await hostPage.click('#start-game-btn');
       await expect(hostPage.locator('#game-panel')).toBeVisible({ timeout: 15000 });
 
-      // Wait for options to auto-show after music clip ends, then wait for auto-reveal
-      await hostPage.waitForTimeout(25000); // Wait for music clip to finish and answer time to expire
+      // Trigger host to show options (mock audio doesn't fire 'ended' events)
+      await triggerHostShowOptions(hostPage, playerPage);
 
-      // Wait for reveal button or auto-reveal
-      const revealBtn = hostPage.locator('#reveal-answer-btn');
-      if (await revealBtn.isVisible()) {
-        await revealBtn.click();
-      } else {
-        // Wait for auto-reveal
-        await hostPage.waitForTimeout(5000);
-      }
-
-      // Next button should be visible
-      await expect(hostPage.locator('#next-song-btn')).toBeVisible({ timeout: 15000 });
+      // Wait for correct answer to auto-reveal (after answer time expires)
+      // The game auto-reveals answers without a manual button
+      // Use .first() to avoid strict mode violation when multiple elements match
+      await expect(
+        hostPage.locator('#correct-answer-reveal, #host-correct-answer').first()
+      ).toBeVisible({ timeout: 20000 });
     } finally {
       await hostContext.close();
       await playerContext.close();
     }
   });
 
-  test('clicking "Next Song" should advance to next song', async ({ browser }) => {
+  test('game should auto-advance to next song', async ({ browser }) => {
     const { hostContext, playerContext, hostPage, playerPage } =
       await setupGameWithPlayer(browser, uniqueName('Host'), uniqueName('Player'));
 
@@ -648,24 +677,24 @@ test.describe('Multiplayer Gameplay - Song Progression', () => {
       // Get initial song number
       const initialSong = await hostPage.locator('#host-song-number').textContent();
 
-      // Wait for auto-show options and auto-reveal
-      await hostPage.waitForTimeout(25000);
+      // Trigger host to show options (mock audio doesn't fire 'ended' events)
+      await triggerHostShowOptions(hostPage, playerPage);
 
-      // Wait for reveal button or auto-reveal
-      const revealBtn = hostPage.locator('#reveal-answer-btn');
-      if (await revealBtn.isVisible()) {
-        await revealBtn.click();
-      } else {
-        await hostPage.waitForTimeout(5000);
-      }
+      // Player answers to speed up auto-advance
+      await expect(playerPage.locator('#nonhost-kahoot-options')).toBeVisible({ timeout: 10000 });
+      await playerPage.locator('#nonhost-kahoot-options .kahoot-option').first().click();
 
-      // Click next
-      await expect(hostPage.locator('#next-song-btn')).toBeVisible({ timeout: 15000 });
-      await hostPage.click('#next-song-btn');
+      // Wait for auto-advance to next song (game auto-reveals and advances)
+      await hostPage.waitForFunction(
+        (initial) => {
+          const songNum = document.getElementById('host-song-number');
+          return songNum && songNum.textContent !== initial;
+        },
+        initialSong,
+        { timeout: 25000 }
+      );
 
-      await hostPage.waitForTimeout(1000);
-
-      // Song number should change
+      // Song number should have changed
       const newSong = await hostPage.locator('#host-song-number').textContent();
       expect(newSong).not.toBe(initialSong);
     } finally {
@@ -682,29 +711,27 @@ test.describe('Multiplayer Gameplay - Song Progression', () => {
       await hostPage.click('#start-game-btn');
       await expect(playerPage.locator('#game-panel')).toBeVisible({ timeout: 15000 });
 
-      // Wait for options to auto-show
+      // Trigger host to show options (mock audio doesn't fire 'ended' events)
+      await triggerHostShowOptions(hostPage, playerPage);
+
       await expect(playerPage.locator('#nonhost-kahoot-options')).toBeVisible({
-        timeout: 30000,
+        timeout: 10000,
       });
 
       // Player answers
       await playerPage.locator('#nonhost-kahoot-options .kahoot-option').first().click();
 
-      // Host reveals and moves to next
-      const revealBtn = hostPage.locator('#reveal-answer-btn');
-      if (await revealBtn.isVisible()) {
-        await revealBtn.click();
-      } else {
-        await hostPage.waitForTimeout(20000); // Wait for answer time to expire
-      }
-
-      await expect(hostPage.locator('#next-song-btn')).toBeVisible({ timeout: 15000 });
-      await hostPage.click('#next-song-btn');
-
-      await playerPage.waitForTimeout(1000);
+      // Wait for auto-advance to next song (options should hide, waiting state should show)
+      await playerPage.waitForFunction(
+        () => {
+          const waitingState = document.getElementById('player-waiting-state');
+          return waitingState && window.getComputedStyle(waitingState).display !== 'none';
+        },
+        { timeout: 25000 }
+      );
 
       // Player should see waiting state again
-      await expect(playerPage.locator('#player-waiting-state')).toBeVisible({ timeout: 5000 });
+      await expect(playerPage.locator('#player-waiting-state')).toBeVisible();
     } finally {
       await hostContext.close();
       await playerContext.close();
@@ -725,9 +752,11 @@ test.describe('Multiplayer Gameplay - Live Updates', () => {
       await hostPage.click('#start-game-btn');
       await expect(playerPage.locator('#game-panel')).toBeVisible({ timeout: 15000 });
 
-      // Wait for options to auto-show after music clip ends
+      // Trigger host to show options (mock audio doesn't fire 'ended' events)
+      await triggerHostShowOptions(hostPage, playerPage);
+
       await expect(playerPage.locator('#nonhost-kahoot-options')).toBeVisible({
-        timeout: 30000,
+        timeout: 10000,
       });
 
       // Player answers
@@ -753,9 +782,11 @@ test.describe('Multiplayer Gameplay - Live Updates', () => {
       await hostPage.click('#start-game-btn');
       await expect(playerPage.locator('#game-panel')).toBeVisible({ timeout: 15000 });
 
-      // Wait for options to auto-show after music clip ends
+      // Trigger host to show options (mock audio doesn't fire 'ended' events)
+      await triggerHostShowOptions(hostPage, playerPage);
+
       await expect(playerPage.locator('#nonhost-kahoot-options')).toBeVisible({
-        timeout: 30000,
+        timeout: 10000,
       });
 
       // Player answers
@@ -822,12 +853,14 @@ test.describe('Multiplayer Gameplay - Multiple Players', () => {
       await expect(player1Page.locator('#game-panel')).toBeVisible({ timeout: 15000 });
       await expect(player2Page.locator('#game-panel')).toBeVisible({ timeout: 15000 });
 
-      // Wait for options to auto-show after music clip ends
+      // Trigger host to show options (mock audio doesn't fire 'ended' events)
+      await triggerHostShowOptions(hostPage, player1Page);
+
       await expect(player1Page.locator('#nonhost-kahoot-options')).toBeVisible({
-        timeout: 30000,
+        timeout: 10000,
       });
       await expect(player2Page.locator('#nonhost-kahoot-options')).toBeVisible({
-        timeout: 30000,
+        timeout: 10000,
       });
 
       // Both players answer

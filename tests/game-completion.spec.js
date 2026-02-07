@@ -570,8 +570,8 @@ test.describe('Game Completion - Play Again', () => {
       // Wait for results after auto-advance
       await hostPage.waitForSelector('#results-panel:not(.hidden)', { timeout: 15000 });
 
-      // Play again button should be visible
-      const playAgainBtn = hostPage.locator('button:has-text("Play Again"), #play-again-btn');
+      // Play again button should be visible (use specific ID for multiplayer)
+      const playAgainBtn = hostPage.locator('#play-again-btn');
       await expect(playAgainBtn).toBeVisible();
     } finally {
       await hostContext.close();
@@ -717,8 +717,8 @@ test.describe('Game Completion - Single Player Results', () => {
       timeout: 15000,
     });
 
-    // Score should be displayed
-    const scoreEl = page.locator('#final-single-score, .final-score');
+    // Score should be displayed (actual ID is #final-score)
+    const scoreEl = page.locator('#final-score');
     await expect(scoreEl).toBeVisible();
   });
 
@@ -761,8 +761,8 @@ test.describe('Game Completion - Single Player Results', () => {
       timeout: 15000,
     });
 
-    // Accuracy should be displayed
-    const accuracyEl = page.locator('#final-accuracy, .accuracy');
+    // Accuracy should be displayed (actual ID is #accuracy-percentage)
+    const accuracyEl = page.locator('#accuracy-percentage');
     await expect(accuracyEl).toBeVisible();
   });
 
@@ -805,8 +805,8 @@ test.describe('Game Completion - Single Player Results', () => {
       timeout: 15000,
     });
 
-    // Correct count should be displayed
-    const correctEl = page.locator('#final-correct-count, .correct-count');
+    // Correct count should be displayed (actual ID is #correct-count)
+    const correctEl = page.locator('#correct-count');
     await expect(correctEl).toBeVisible();
   });
 });

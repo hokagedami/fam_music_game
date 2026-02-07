@@ -4576,3 +4576,314 @@ body {
   font-size: 1.2rem;
   box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4);
 }
+
+/* ========================================
+   GAME SETTINGS - REDESIGNED
+   ======================================== */
+
+#music-settings-section h3 {
+  color: #667eea;
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+/* Settings Cards Container */
+.settings-cards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+/* Individual Setting Card */
+.setting-card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 20px;
+  border: 3px solid #e0d5cc;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+}
+
+.setting-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+}
+
+/* Color-coded borders */
+.setting-songs { border-color: #f472b6; }
+.setting-songs:hover { border-color: #ec4899; }
+
+.setting-duration { border-color: #38bdf8; }
+.setting-duration:hover { border-color: #0ea5e9; }
+
+.setting-answer { border-color: #a78bfa; }
+.setting-answer:hover { border-color: #8b5cf6; }
+
+.setting-players { border-color: #4ade80; }
+.setting-players:hover { border-color: #22c55e; }
+
+.setting-difficulty { border-color: #fbbf24; }
+.setting-difficulty:hover { border-color: #f59e0b; }
+
+/* Setting Icon */
+.setting-icon {
+  font-size: 2rem;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(145deg, #f8fafc 0%, #e2e8f0 100%);
+  border-radius: 15px;
+  flex-shrink: 0;
+}
+
+/* Setting Content */
+.setting-content {
+  flex: 1;
+}
+
+.setting-label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #374151;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Setting Options Buttons */
+.setting-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.setting-btn {
+  background: linear-gradient(145deg, #f1f5f9 0%, #e2e8f0 100%);
+  border: 2px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 45px;
+  text-align: center;
+}
+
+.setting-btn:hover {
+  background: linear-gradient(145deg, #e2e8f0 0%, #cbd5e1 100%);
+  border-color: #94a3b8;
+}
+
+.setting-btn.active {
+  background: linear-gradient(145deg, #667eea 0%, #764ba2 100%);
+  border-color: #5b21b6;
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+/* Songs card - pink active */
+.setting-songs .setting-btn.active {
+  background: linear-gradient(145deg, #f472b6 0%, #ec4899 100%);
+  border-color: #be185d;
+  box-shadow: 0 4px 15px rgba(236, 72, 153, 0.4);
+}
+
+/* Duration card - blue active */
+.setting-duration .setting-btn.active {
+  background: linear-gradient(145deg, #38bdf8 0%, #0ea5e9 100%);
+  border-color: #0369a1;
+  box-shadow: 0 4px 15px rgba(14, 165, 233, 0.4);
+}
+
+/* Answer card - purple active */
+.setting-answer .setting-btn.active {
+  background: linear-gradient(145deg, #a78bfa 0%, #8b5cf6 100%);
+  border-color: #6d28d9;
+  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+}
+
+/* Players card - green active */
+.setting-players .setting-btn.active {
+  background: linear-gradient(145deg, #4ade80 0%, #22c55e 100%);
+  border-color: #15803d;
+  box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4);
+}
+
+/* Difficulty card - yellow active */
+.setting-difficulty .setting-btn.active {
+  background: linear-gradient(145deg, #fbbf24 0%, #f59e0b 100%);
+  border-color: #b45309;
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
+}
+
+/* Hidden select */
+.hidden-select {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Toggle Options */
+.settings-toggles {
+  background: linear-gradient(145deg, #fdf4ff 0%, #fae8ff 100%);
+  border-radius: 20px;
+  padding: 20px;
+  margin-bottom: 25px;
+  border: 2px solid #e9d5ff;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  justify-content: center;
+}
+
+.toggle-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  padding: 10px 15px;
+  background: #fff;
+  border-radius: 30px;
+  border: 2px solid #e9d5ff;
+  transition: all 0.3s ease;
+}
+
+.toggle-option:hover {
+  border-color: #c084fc;
+  box-shadow: 0 4px 15px rgba(192, 132, 252, 0.2);
+}
+
+.toggle-option input[type="checkbox"] {
+  display: none;
+}
+
+.toggle-slider {
+  width: 50px;
+  height: 26px;
+  background: #cbd5e1;
+  border-radius: 30px;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.toggle-slider::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  background: #fff;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.toggle-option input:checked + .toggle-slider {
+  background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+}
+
+.toggle-option input:checked + .toggle-slider::after {
+  left: 27px;
+}
+
+.toggle-label {
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.95rem;
+}
+
+/* Start Game Section */
+.start-game-section {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.btn-start-game {
+  background: linear-gradient(145deg, #22c55e 0%, #16a34a 100%);
+  color: #fff;
+  font-size: 1.2rem;
+  padding: 15px 40px;
+  border-radius: 30px;
+  font-weight: 700;
+  border: none;
+  box-shadow: 0 6px 25px rgba(22, 163, 74, 0.4);
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.btn-start-game:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 10px 35px rgba(22, 163, 74, 0.5);
+}
+
+.btn-back {
+  background: linear-gradient(145deg, #f1f5f9 0%, #e2e8f0 100%);
+  color: #475569;
+  border: 2px solid #cbd5e1;
+  font-size: 1rem;
+  padding: 12px 25px;
+  box-shadow: none;
+}
+
+.btn-back:hover {
+  background: linear-gradient(145deg, #e2e8f0 0%, #cbd5e1 100%);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+/* Responsive Settings */
+@media (max-width: 700px) {
+  .settings-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .setting-card {
+    padding: 15px;
+  }
+
+  .setting-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1.5rem;
+  }
+
+  .setting-options {
+    gap: 6px;
+  }
+
+  .setting-btn {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+  }
+
+  .settings-toggles {
+    flex-direction: column;
+  }
+
+  .start-game-section {
+    flex-direction: column;
+  }
+
+  .btn-start-game {
+    width: 100%;
+  }
+
+  .btn-back {
+    width: 100%;
+  }
+}

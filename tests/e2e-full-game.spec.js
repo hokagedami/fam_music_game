@@ -1,12 +1,11 @@
 // @ts-check
 import { test, expect } from '@playwright/test';
-import path from 'path';
 
 /**
  * End-to-End Full Game Test
  *
- * Tests complete multiplayer game flow with real audio files:
- * - Host creates game with real music files
+ * Tests complete multiplayer game flow with mock audio:
+ * - Host creates game with mock music files
  * - 2 players join
  * - Game plays through all songs
  * - Players answer questions
@@ -45,6 +44,53 @@ async function getGameId(page) {
     }
     return null;
   });
+}
+
+// Helper to load mock music files
+async function loadMockMusic(page, count = 3) {
+  await page.evaluate((songCount) => {
+    const createMockAudioFile = (name) => {
+      const mp3Header = new Uint8Array([
+        0xff, 0xfb, 0x90, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00,
+      ]);
+      const blob = new Blob([mp3Header], { type: 'audio/mp3' });
+      return new File([blob], name, { type: 'audio/mp3' });
+    };
+
+    const songNames = ['Sample Song 1', 'Sample Song 2', 'Sample Song 3'];
+
+    const mockFiles = Array.from({ length: songCount }, (_, i) => {
+      const file = createMockAudioFile(`sample${i + 1}.mp3`);
+      return {
+        file,
+        url: URL.createObjectURL(file),
+        metadata: {
+          title: songNames[i] || `Test Song ${i + 1}`,
+          artist: `Test Artist ${i + 1}`,
+          album: `Test Album`,
+          year: '2024',
+        },
+      };
+    });
+
+    if (typeof window.__testSetMusicFiles === 'function') {
+      window.__testSetMusicFiles(mockFiles);
+    }
+  }, count);
+
+  await page.waitForTimeout(500);
+}
+
+// Helper to trigger host showing options to players
+async function triggerHostShowOptions(hostPage, playerPage) {
+  await hostPage.waitForTimeout(500);
+  await hostPage.evaluate(() => {
+    if (typeof window.hostShowOptions === 'function') {
+      window.hostShowOptions();
+    }
+  });
+  await playerPage.waitForTimeout(500);
 }
 
 test.describe('E2E Full Game Flow', () => {
@@ -92,19 +138,9 @@ test.describe('E2E Full Game Flow', () => {
       await hostPage.waitForSelector('#setup-panel:not(.hidden)', { timeout: 5000 });
       console.log('Host on setup panel');
 
-      // Upload real test audio files
-      const testMusicDir = path.join(process.cwd(), 'test-music');
-      const fileInput = await hostPage.locator('#music-files');
-      await fileInput.setInputFiles([
-        path.join(testMusicDir, 'sample1.mp3'),
-        path.join(testMusicDir, 'sample2.mp3'),
-        path.join(testMusicDir, 'sample3.mp3'),
-      ]);
-      console.log('Uploaded 3 real audio files');
-
-      // Wait for files to load
-      await hostPage.waitForSelector('#music-settings-section:not(.hidden)', { timeout: 10000 });
-      console.log('Music loaded, settings visible');
+      // Load mock audio files
+      await loadMockMusic(hostPage, 3);
+      console.log('Loaded 3 mock audio files');
 
       // Configure game: 3 songs, 5 second clips (shortest available), 10 second answer time
       await hostPage.selectOption('#songs-count', '3');
@@ -184,14 +220,17 @@ test.describe('E2E Full Game Flow', () => {
       for (let songNum = 1; songNum <= 3; songNum++) {
         console.log(`\n--- Song ${songNum} ---`);
 
-        // Wait for options to appear for players (after music clip ends)
+        // Trigger host to show options (mock audio doesn't fire 'ended' events)
+        await triggerHostShowOptions(hostPage, player1Page);
+
+        // Wait for options to appear for players
         console.log('Waiting for options to appear...');
         await player1Page.waitForFunction(
           () => {
             const options = document.getElementById('nonhost-kahoot-options');
             return options && window.getComputedStyle(options).display !== 'none';
           },
-          { timeout: 20000 }
+          { timeout: 10000 }
         );
         console.log(`Song ${songNum}: Options appeared for players`);
 

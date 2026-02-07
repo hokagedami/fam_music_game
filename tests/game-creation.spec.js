@@ -93,7 +93,8 @@ test.describe('Game Creation - Navigation', () => {
     await page.goto('/');
     await page.click('button:has-text("Create Game")');
 
-    const backBtn = page.locator('button:has-text("Back"), button:has-text("Home"), .back-btn');
+    // Use specific selector for back button in setup panel
+    const backBtn = page.locator('#setup-panel .back-btn');
     await expect(backBtn).toBeVisible();
   });
 
@@ -101,7 +102,8 @@ test.describe('Game Creation - Navigation', () => {
     await page.goto('/');
     await page.click('button:has-text("Create Game")');
 
-    await page.click('button:has-text("Back"), button:has-text("Home"), .back-btn');
+    // Click the back button in setup panel
+    await page.click('#setup-panel .back-btn');
 
     await expect(page.locator('#home-panel')).toBeVisible();
   });
@@ -321,7 +323,8 @@ test.describe('Game Creation - Lobby Display', () => {
 
     await expect(page.locator('#lobby-panel')).toBeVisible({ timeout: 15000 });
 
-    const copyBtn = page.locator('#copy-game-id, button:has-text("Copy"), .copy-btn');
+    // Use specific selector for the copy button in lobby panel
+    const copyBtn = page.locator('#lobby-panel button:has-text("Copy Game ID")');
     await expect(copyBtn).toBeVisible();
   });
 
@@ -370,7 +373,8 @@ test.describe('Game Creation - Lobby Display', () => {
 
     await expect(page.locator('#lobby-panel')).toBeVisible({ timeout: 15000 });
 
-    const leaveBtn = page.locator('button:has-text("Leave"), #leave-game-btn');
+    // Use specific selector for leave button in lobby panel
+    const leaveBtn = page.locator('#lobby-panel button:has-text("Leave Game")');
     await expect(leaveBtn).toBeVisible();
   });
 });
@@ -420,8 +424,8 @@ test.describe('Game Creation - Leaving Game', () => {
 
     await expect(page.locator('#lobby-panel')).toBeVisible({ timeout: 15000 });
 
-    // Leave game
-    await page.click('button:has-text("Leave"), #leave-game-btn');
+    // Leave game (use specific selector for lobby panel)
+    await page.click('#lobby-panel button:has-text("Leave Game")');
 
     await expect(page.locator('#home-panel')).toBeVisible({ timeout: 5000 });
   });
@@ -486,7 +490,8 @@ test.describe('Game Creation - Connection Status', () => {
     await page.goto('/');
     await page.click('button:has-text("Create Game")');
 
-    const connectionStatus = page.locator('#connection-status, .connection-status');
+    // Connection status is in the panel header with ID setup-connection-status
+    const connectionStatus = page.locator('#setup-connection-status, .connection-status-indicator');
     await expect(connectionStatus).toBeVisible();
   });
 
@@ -496,9 +501,15 @@ test.describe('Game Creation - Connection Status', () => {
 
     await waitForConnection(page);
 
-    const connectionStatus = page.locator('#connection-status, .connection-status');
-    const statusText = await connectionStatus.textContent();
-    expect(statusText?.toLowerCase()).toMatch(/online|connected/);
+    // Check status text or dot class indicates connection
+    const statusText = page.locator('#status-text');
+    const statusDot = page.locator('#setup-connection-status .status-dot');
+
+    // Either the dot has connected class or text shows connected
+    const hasConnectedDot = await statusDot.evaluate(el => el.classList.contains('connected')).catch(() => false);
+    const text = await statusText.textContent().catch(() => '');
+
+    expect(hasConnectedDot || text?.toLowerCase().match(/online|connected/)).toBeTruthy();
   });
 });
 

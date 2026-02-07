@@ -51,8 +51,7 @@ test.describe('UI Screenshots - Text Visibility Check', () => {
     await page.click('button:has-text("Create Game")');
     await page.waitForLoadState('networkidle');
 
-    // Fill host name
-    await page.fill('#host-name', 'TestHost');
+    // Host name is set automatically via hidden input, no need to fill
 
     // Load mock music files using test helper
     await page.evaluate(() => {
@@ -64,8 +63,8 @@ test.describe('UI Screenshots - Text Visibility Check', () => {
       window.__testSetMusicFiles(mockFiles);
     });
 
-    // Click create game
-    await page.click('#start-game-btn');
+    // Click create game (button ID is start-game-button)
+    await page.click('#start-game-button');
 
     // Wait for lobby to appear
     await page.waitForSelector('#lobby-panel:not(.hidden)', { timeout: 15000 });
@@ -117,9 +116,9 @@ test.describe('UI Screenshots - Text Visibility Check', () => {
     await page.click('button:has-text("Play Solo")');
     await page.waitForLoadState('networkidle');
 
-    // Check that the single player setup is visible
-    const singleSetupPanel = page.locator('#single-setup-panel');
-    await expect(singleSetupPanel).toBeVisible();
+    // Check that the setup panel is visible (same panel used for both single/multiplayer)
+    const setupPanel = page.locator('#setup-panel');
+    await expect(setupPanel).toBeVisible();
 
     // Take screenshot
     await page.screenshot({ path: 'test-screenshots/06-single-player-setup.png', fullPage: true });

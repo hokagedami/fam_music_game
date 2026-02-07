@@ -505,8 +505,8 @@ test.describe('Player Management - Leaving Game', () => {
 
       await expect(playerPage.locator('#lobby-panel')).toBeVisible({ timeout: 15000 });
 
-      // Host leaves
-      await hostPage.click('button:has-text("Leave"), #leave-game-btn');
+      // Host leaves (use specific selector for lobby panel)
+      await hostPage.click('#lobby-panel button:has-text("Leave Game")');
 
       // Player should be redirected to home (game deleted)
       await expect(playerPage.locator('#home-panel')).toBeVisible({ timeout: 15000 });

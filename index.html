@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Music Quiz Game</title>
-  <link rel="stylesheet" href="styles.css?v=6">
+  <title>Fun Music Game</title>
+  <link rel="stylesheet" href="styles.css?v=7">
   <!-- Socket.IO is bundled in the TypeScript client, no CDN needed -->
   <!-- jsmediatags for audio metadata extraction -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
@@ -41,8 +41,8 @@
 
   <div class="header">
     <div class="header-content">
-      <h1 id="main-title">Music Quiz Odyssey</h1>
-      <p id="main-subtitle">Embark on a journey of sound!</p>
+      <h1 id="main-title">Fun Music Game</h1>
+      <p id="main-subtitle">Test your music knowledge with friends!</p>
     </div>
     <!-- Settings Button (Desktop Only) -->
     <button id="settings-btn" class="btn btn-secondary settings-btn desktop-only hidden" onclick="openSettings()">
@@ -203,86 +203,151 @@
       <div id="music-file-list" class="file-list"></div>
     </div>
 
-    <!-- Game Settings -->
+    <!-- Game Settings - Redesigned -->
     <div id="music-settings-section">
-      <h3>Game Settings</h3>
-      <div class="settings-grid">
-        <div class="form-group">
-          <label for="songs-count">Number of Songs:</label>
-          <select id="songs-count">
-            <option value="1">1 Song (Quick)</option>
-            <option value="2">2 Songs</option>
-            <option value="3">3 Songs</option>
-            <option value="5">5 Songs</option>
-            <option value="10" selected>10 Songs</option>
-            <option value="15">15 Songs</option>
-            <option value="20">20 Songs</option>
-            <option value="30">30 Songs</option>
-          </select>
+      <h3>⚙️ Game Settings</h3>
+
+      <div class="settings-cards">
+        <!-- Songs Count Card -->
+        <div class="setting-card setting-songs">
+          <div class="setting-icon">🎵</div>
+          <div class="setting-content">
+            <label class="setting-label">Number of Songs</label>
+            <div class="setting-options" id="songs-options">
+              <button type="button" class="setting-btn" data-value="3">3</button>
+              <button type="button" class="setting-btn" data-value="5">5</button>
+              <button type="button" class="setting-btn active" data-value="10">10</button>
+              <button type="button" class="setting-btn" data-value="15">15</button>
+              <button type="button" class="setting-btn" data-value="20">20</button>
+            </div>
+            <select id="songs-count" class="hidden-select">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="5">5</option>
+              <option value="10" selected>10</option>
+              <option value="15">15</option>
+              <option value="20">20</option>
+              <option value="30">30</option>
+            </select>
+          </div>
         </div>
-        <div class="form-group">
-          <label for="clip-duration">Clip Duration:</label>
-          <select id="clip-duration">
-            <option value="5">5 seconds</option>
-            <option value="10">10 seconds</option>
-            <option value="15">15 seconds</option>
-            <option value="20" selected>20 seconds</option>
-            <option value="30">30 seconds</option>
-            <option value="45">45 seconds</option>
-          </select>
+
+        <!-- Clip Duration Card -->
+        <div class="setting-card setting-duration">
+          <div class="setting-icon">⏱️</div>
+          <div class="setting-content">
+            <label class="setting-label">Clip Duration</label>
+            <div class="setting-options" id="duration-options">
+              <button type="button" class="setting-btn" data-value="10">10s</button>
+              <button type="button" class="setting-btn active" data-value="20">20s</button>
+              <button type="button" class="setting-btn" data-value="30">30s</button>
+              <button type="button" class="setting-btn" data-value="45">45s</button>
+            </div>
+            <select id="clip-duration" class="hidden-select">
+              <option value="5">5</option>
+              <option value="10">10</option>
+              <option value="15">15</option>
+              <option value="20" selected>20</option>
+              <option value="30">30</option>
+              <option value="45">45</option>
+            </select>
+          </div>
         </div>
-        <div class="form-group" id="answer-time-group">
-          <label for="answer-time">Answer Time:</label>
-          <select id="answer-time">
-            <option value="5">5 seconds</option>
-            <option value="10">10 seconds</option>
-            <option value="15" selected>15 seconds</option>
-            <option value="20">20 seconds</option>
-            <option value="30">30 seconds</option>
-          </select>
+
+        <!-- Answer Time Card -->
+        <div class="setting-card setting-answer" id="answer-time-group">
+          <div class="setting-icon">🤔</div>
+          <div class="setting-content">
+            <label class="setting-label">Answer Time</label>
+            <div class="setting-options" id="answer-options">
+              <button type="button" class="setting-btn" data-value="10">10s</button>
+              <button type="button" class="setting-btn active" data-value="15">15s</button>
+              <button type="button" class="setting-btn" data-value="20">20s</button>
+              <button type="button" class="setting-btn" data-value="30">30s</button>
+            </div>
+            <select id="answer-time" class="hidden-select">
+              <option value="5">5</option>
+              <option value="10">10</option>
+              <option value="15" selected>15</option>
+              <option value="20">20</option>
+              <option value="30">30</option>
+            </select>
+          </div>
         </div>
-        <div class="form-group" id="max-players-group">
-          <label for="max-players">Max Players:</label>
-          <select id="max-players">
-            <option value="2">2 Players</option>
-            <option value="4">4 Players</option>
-            <option value="6" selected>6 Players</option>
-            <option value="8">8 Players</option>
-            <option value="10">10 Players</option>
-          </select>
-        </div>
-        <div class="form-group" id="difficulty-group" style="display: none;">
-          <label for="difficulty">Difficulty Level:</label>
-          <select id="difficulty">
-            <option value="easy">Easy (More time)</option>
-            <option value="normal" selected>Normal</option>
-            <option value="hard">Hard (Less time)</option>
-            <option value="expert">Expert (Very short clips)</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>
-            <input type="checkbox" id="autoplay-next" checked>
-            🎵 Auto-advance songs
-          </label>
-        </div>
-        <div class="form-group" id="single-player-options" style="display: none;">
-          <label>
-            <input type="checkbox" id="show-hints" checked>
-            💡 Show hints available
-          </label>
-        </div>
-        <div class="form-group" id="single-player-options-2" style="display: none;">
-          <label>
-            <input type="checkbox" id="shuffle-songs" checked>
-            🔀 Shuffle song order
-          </label>
+
+        <!-- Max Players Card -->
+        <div class="setting-card setting-players" id="max-players-group">
+          <div class="setting-icon">👥</div>
+          <div class="setting-content">
+            <label class="setting-label">Max Players</label>
+            <div class="setting-options" id="players-options">
+              <button type="button" class="setting-btn" data-value="2">2</button>
+              <button type="button" class="setting-btn" data-value="4">4</button>
+              <button type="button" class="setting-btn active" data-value="6">6</button>
+              <button type="button" class="setting-btn" data-value="8">8</button>
+              <button type="button" class="setting-btn" data-value="10">10</button>
+            </div>
+            <select id="max-players" class="hidden-select">
+              <option value="2">2</option>
+              <option value="4">4</option>
+              <option value="6" selected>6</option>
+              <option value="8">8</option>
+              <option value="10">10</option>
+            </select>
+          </div>
         </div>
       </div>
 
-      <div class="panel-actions">
-        <button class="btn" id="start-game-button" onclick="startGame()">Start Game</button>
-        <button class="btn btn-secondary" onclick="showPanel('home')">Back</button>
+      <!-- Difficulty (hidden by default) -->
+      <div class="setting-card setting-difficulty" id="difficulty-group" style="display: none;">
+        <div class="setting-icon">🎯</div>
+        <div class="setting-content">
+          <label class="setting-label">Difficulty Level</label>
+          <div class="setting-options" id="difficulty-options">
+            <button type="button" class="setting-btn" data-value="easy">Easy</button>
+            <button type="button" class="setting-btn active" data-value="normal">Normal</button>
+            <button type="button" class="setting-btn" data-value="hard">Hard</button>
+            <button type="button" class="setting-btn" data-value="expert">Expert</button>
+          </div>
+          <select id="difficulty" class="hidden-select">
+            <option value="easy">Easy</option>
+            <option value="normal" selected>Normal</option>
+            <option value="hard">Hard</option>
+            <option value="expert">Expert</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Toggle Options -->
+      <div class="settings-toggles">
+        <label class="toggle-option">
+          <input type="checkbox" id="autoplay-next" checked>
+          <span class="toggle-slider"></span>
+          <span class="toggle-label">🎵 Auto-advance songs</span>
+        </label>
+
+        <label class="toggle-option" id="single-player-options" style="display: none;">
+          <input type="checkbox" id="show-hints" checked>
+          <span class="toggle-slider"></span>
+          <span class="toggle-label">💡 Show hints</span>
+        </label>
+
+        <label class="toggle-option" id="single-player-options-2" style="display: none;">
+          <input type="checkbox" id="shuffle-songs" checked>
+          <span class="toggle-slider"></span>
+          <span class="toggle-label">🔀 Shuffle songs</span>
+        </label>
+      </div>
+
+      <!-- Start Button -->
+      <div class="start-game-section">
+        <button class="btn btn-start-game" id="start-game-button" onclick="startGame()">
+          🎮 Start Game
+        </button>
+        <button class="btn btn-secondary btn-back" onclick="showPanel('home')">
+          ← Back
+        </button>
       </div>
     </div>
   </div>

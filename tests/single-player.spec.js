@@ -232,11 +232,11 @@ test.describe('Single Player - Game Start', () => {
     await expect(page.locator('#game-panel')).toBeVisible({ timeout: 10000 });
 
     // Should show song progress (e.g., "Song 1 of 3")
-    // Using the actual HTML element IDs: #current-song-num and #total-songs
-    const currentSongEl = page.locator('#current-song-num, .question-counter');
-    await expect(currentSongEl).toBeVisible();
-    const text = await currentSongEl.textContent();
-    expect(text).toMatch(/1/);
+    // The question-counter div contains: Song <span id="current-song-num">1</span> of <span id="total-songs">3</span>
+    const questionCounter = page.locator('.question-counter');
+    await expect(questionCounter).toBeVisible();
+    const text = await questionCounter.textContent();
+    expect(text).toMatch(/Song 1 of/);
   });
 
   test('should initialize score at zero', async ({ page }) => {
@@ -639,13 +639,14 @@ test.describe('Single Player - Multi-Song Flow', () => {
 
     // Answer song 1
     await page.locator('#single-kahoot-options .kahoot-option').first().click();
-    await page.waitForTimeout(1500);
 
-    // Should be on song 2 or waiting for next (using correct selector)
+    // Wait for auto-advance (happens after 2.5 seconds: 0.5s feedback + 2s delay)
+    await page.waitForTimeout(3000);
+
+    // Should be on song 2 now
     const currentSongEl = page.locator('#current-song-num');
     await expect(currentSongEl).toBeVisible({ timeout: 5000 });
-    const progressText = await currentSongEl.textContent();
-    expect(progressText).toMatch(/2|Song/);
+    await expect(currentSongEl).toHaveText('2', { timeout: 5000 });
   });
 
   test('should track streak for consecutive correct answers', async ({

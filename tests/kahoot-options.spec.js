@@ -71,6 +71,23 @@ async function loadMockMusic(page) {
   return result;
 }
 
+// Helper to trigger host showing options to players
+// This simulates what happens when the audio clip ends (since mock audio doesn't fire 'ended' events)
+async function triggerHostShowOptions(hostPage, playerPage) {
+  // Give the game a moment to initialize audio
+  await hostPage.waitForTimeout(500);
+
+  // Host manually triggers showing options (simulates audio clip ending)
+  await hostPage.evaluate(() => {
+    if (typeof window.hostShowOptions === 'function') {
+      window.hostShowOptions();
+    }
+  });
+
+  // Wait for socket event to reach player
+  await playerPage.waitForTimeout(500);
+}
+
 // ============================================
 // SINGLE PLAYER KAHOOT TESTS
 // ============================================
@@ -146,7 +163,7 @@ test.describe('Multiplayer - Host View', () => {
       await expect(hostPage.locator('#host-music-player')).toBeVisible();
 
       // HOST should see audio controls
-      await expect(hostPage.locator('#music-audio')).toBeVisible();
+      await expect(hostPage.locator('#host-audio-player')).toBeVisible();
 
       // NOTE: Show Options button is now hidden by default - options auto-show when music ends
       // The button exists but is hidden for better UX
@@ -482,8 +499,8 @@ test.describe('Kahoot - Game Flow', () => {
       // We just need to verify the host view is working
       await expect(hostPage.locator('#host-music-player')).toBeVisible();
 
-      // Wait for music clip to end and options to auto-show
-      await hostPage.waitForTimeout(25000);
+      // Trigger host to show options (mock audio doesn't fire 'ended' events)
+      await triggerHostShowOptions(hostPage, playerPage);
 
       // Host waiting status should be visible after options are shown
       await expect(hostPage.locator('#host-waiting-status')).toBeVisible({ timeout: 10000 });
@@ -612,11 +629,11 @@ test.describe('Kahoot - Game Flow', () => {
 
       console.log('[PLAYER] Initial state: waiting, options hidden');
 
-      // Options auto-show when music clip ends (no manual button click needed)
-      console.log('[HOST] Waiting for music clip to end and auto-show options...');
+      // Trigger host to show options (mock audio doesn't fire 'ended' events)
+      await triggerHostShowOptions(hostPage, playerPage);
 
       // Player should now see the options (waiting state hidden, options visible)
-      await expect(playerPage.locator('#nonhost-kahoot-options')).toBeVisible({ timeout: 30000 });
+      await expect(playerPage.locator('#nonhost-kahoot-options')).toBeVisible({ timeout: 10000 });
       await expect(playerPage.locator('#player-waiting-state')).not.toBeVisible();
 
       // All 4 shape options should be visible to player

@@ -161,6 +161,40 @@ function setupEventListeners() {
       });
     }
   });
+
+  // Setup settings button handlers
+  setupSettingsButtons();
+}
+
+/**
+ * Setup click handlers for visual settings buttons
+ */
+function setupSettingsButtons() {
+  const settingMappings = [
+    { container: 'songs-options', select: 'songs-count' },
+    { container: 'duration-options', select: 'clip-duration' },
+    { container: 'answer-options', select: 'answer-time' },
+    { container: 'players-options', select: 'max-players' },
+    { container: 'difficulty-options', select: 'difficulty' },
+  ];
+
+  settingMappings.forEach(({ container, select }) => {
+    const containerEl = getElementById(container);
+    const selectEl = getElementById(select);
+
+    if (containerEl && selectEl) {
+      containerEl.querySelectorAll('.setting-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          // Update active state
+          containerEl.querySelectorAll('.setting-btn').forEach((b) => b.classList.remove('active'));
+          btn.classList.add('active');
+
+          // Update hidden select
+          selectEl.value = btn.dataset.value;
+        });
+      });
+    }
+  });
 }
 
 /**
