@@ -56,16 +56,23 @@ export function registerGameHandlers(io, socket) {
         currentSong: 0,
         songs: songsMetadata,
         audioUrls: songsMetadata.map((song) => song.audioUrl || song.localUrl || song.url),
-        kahootOptions: kahootOptions,
+        kahootOptions: kahootOptions || {},
+        revealedSongs: new Set(),
         createdAt: Date.now(),
       };
 
+      // Store game (persists to DB)
       gameStore.set(gameId, gameSession);
+      gameStore.registerSocket(socket.id, gameId);
       socket.join(gameId);
+
+      // Generate reconnect token for host
+      const reconnectToken = gameStore.createReconnectToken(gameId, hostName, true);
 
       socket.emit('gameCreated', {
         gameId: gameId,
         gameSession: sanitizeGameSession(gameSession),
+        reconnectToken,
       });
 
       console.log(
@@ -129,13 +136,21 @@ export function registerGameHandlers(io, socket) {
       };
 
       game.players.push(player);
+      gameStore.registerSocket(socket.id, gameId);
       socket.join(gameId);
+
+      // Persist player join
+      gameStore.persist(gameId);
+
+      // Generate reconnect token for player
+      const reconnectToken = gameStore.createReconnectToken(gameId, playerName, false);
 
       // Notify the joining player (only them, not the host)
       socket.emit('gameJoined', {
         gameId: gameId,
         gameSession: sanitizeGameSession(game),
         player: player,
+        reconnectToken,
       });
 
       // Notify all players (including host) that someone joined
@@ -185,6 +200,13 @@ export function registerGameHandlers(io, socket) {
 
       const kickedPlayer = game.players[playerIndex];
       game.players.splice(playerIndex, 1);
+      gameStore.unregisterSocket(data.playerId);
+
+      // Remove kicked player's reconnect token
+      gameStore.deleteTokensForPlayer(data.gameId, kickedPlayer.name);
+
+      // Persist after kick
+      gameStore.persist(data.gameId);
 
       // Notify the kicked player
       io.to(data.playerId).emit('playerKicked', {
@@ -251,6 +273,9 @@ export function registerGameHandlers(io, socket) {
         game.audioUrls = data.songs.map((s) => s.audioUrl);
       }
 
+      // Persist state change
+      gameStore.persist(data.gameId);
+
       io.to(data.gameId).emit('gameStarted', {
         gameSession: sanitizeGameSession(game),
       });
@@ -294,6 +319,8 @@ export function registerGameHandlers(io, socket) {
       game.state = 'lobby';
       game.currentSong = 0;
       game.songs = [];
+      game.kahootOptions = {};
+      game.revealedSongs = new Set();
 
       // Reset all player scores and answers
       game.players.forEach((player) => {
@@ -301,17 +328,80 @@ export function registerGameHandlers(io, socket) {
         player.answers = [];
       });
 
+      // Persist reset
+      gameStore.persist(data.gameId);
+
       // Notify all players that game is reset
       io.to(data.gameId).emit('gameReset', {
         gameId: data.gameId,
+        gameSession: sanitizeGameSession(game),
         message: 'Host is preparing a new game...',
-        songsCount: data.songsCount || 0,
       });
 
       console.log(`Game ${data.gameId} reset by host for new round`);
     } catch (error) {
       console.error('Error resetting game:', error);
       socket.emit('error', { message: 'Failed to reset game: ' + error.message });
+    }
+  });
+
+  // Restart game with new songs (play-again flow: reset + update songs + start)
+  socket.on('restartGame', (data) => {
+    try {
+      if (!data.gameId) {
+        socket.emit('error', { message: 'Game ID is required' });
+        return;
+      }
+
+      const game = gameStore.get(data.gameId);
+      if (!game) {
+        socket.emit('error', { message: 'Game not found' });
+        return;
+      }
+
+      if (game.hostId !== socket.id) {
+        socket.emit('error', { message: 'Not authorized to restart game' });
+        return;
+      }
+
+      // Reset scores and answers
+      game.players.forEach((player) => {
+        player.score = 0;
+        player.answers = [];
+      });
+
+      // Update settings
+      if (data.settings) {
+        game.settings.songsCount = data.settings.songsCount || game.settings.songsCount;
+        game.settings.clipDuration = data.settings.clipDuration || game.settings.clipDuration;
+        game.settings.answerTime = data.settings.answerTime || game.settings.answerTime;
+      }
+
+      // Update songs
+      if (data.songsMetadata && data.songsMetadata.length > 0) {
+        game.songs = data.songsMetadata.map((s) => ({
+          metadata: s.metadata,
+        }));
+      }
+
+      // Start the game
+      game.state = 'playing';
+      game.currentSong = 0;
+      game.kahootOptions = {};
+      game.revealedSongs = new Set();
+
+      gameStore.persist(data.gameId);
+
+      io.to(data.gameId).emit('gameStarted', {
+        gameSession: sanitizeGameSession(game),
+      });
+
+      console.log(
+        `Game ${data.gameId} restarted with ${game.players.length} players and ${game.songs.length} songs`
+      );
+    } catch (error) {
+      console.error('Error restarting game:', error);
+      socket.emit('error', { message: 'Failed to restart game: ' + error.message });
     }
   });
 
@@ -323,7 +413,7 @@ export function registerGameHandlers(io, socket) {
       const game = gameStore.get(data.gameId);
       if (!game) return;
 
-      // If host is leaving, delete the game
+      // If host is leaving, delete the game (cascades tokens)
       if (game.hostId === socket.id) {
         gameStore.delete(data.gameId);
         io.to(data.gameId).emit('gameDeleted', {
@@ -338,7 +428,11 @@ export function registerGameHandlers(io, socket) {
       if (playerIndex !== -1) {
         const player = game.players[playerIndex];
         game.players.splice(playerIndex, 1);
+        gameStore.unregisterSocket(socket.id);
         socket.leave(data.gameId);
+
+        // Persist player leave
+        gameStore.persist(data.gameId);
 
         io.to(data.gameId).emit('playerLeft', {
           gameSession: sanitizeGameSession(game),
@@ -354,37 +448,70 @@ export function registerGameHandlers(io, socket) {
     }
   });
 
-  // Handle disconnection
+  // Handle disconnection - O(1) lookup via socketGameMap
+  // Uses a grace period to allow page reloads / brief network drops
   socket.on('disconnect', () => {
     console.log(`Player disconnected: ${socket.id}`);
 
-    // Check if disconnecting socket is a host or player
-    for (const [gameId, game] of gameStore.entries()) {
-      // Check if host disconnected
-      if (game.hostId === socket.id) {
+    const gameId = gameStore.getGameIdForSocket(socket.id);
+    if (!gameId) return;
+
+    const game = gameStore.get(gameId);
+    if (!game) {
+      gameStore.unregisterSocket(socket.id);
+      return;
+    }
+
+    const graceMs = config.disconnectGraceMs;
+
+    // Check if host disconnected
+    if (game.hostId === socket.id) {
+      console.log(`Host disconnected from game ${gameId}, grace period ${graceMs}ms`);
+
+      // Notify players the host is temporarily disconnected
+      io.to(gameId).emit('hostDisconnected', {
+        message: 'Host disconnected. Waiting for reconnection...',
+        graceMs,
+      });
+
+      // Start grace period timer - delete game only if host doesn't rejoin
+      game.hostDisconnectTimer = setTimeout(() => {
+        game.hostDisconnectTimer = null;
+        // Host didn't rejoin in time - delete the game
         gameStore.delete(gameId);
         io.to(gameId).emit('gameDeleted', {
           message: 'Host has disconnected',
         });
-        console.log(`Game ${gameId} deleted (host disconnected)`);
-        break;
-      }
+        console.log(`Game ${gameId} deleted (host did not rejoin within grace period)`);
+      }, graceMs);
 
-      // Check if a player disconnected
-      const playerIndex = game.players.findIndex((p) => p.id === socket.id);
-      if (playerIndex !== -1) {
-        const player = game.players[playerIndex];
-        game.players.splice(playerIndex, 1);
+      return;
+    }
 
-        io.to(gameId).emit('playerLeft', {
-          gameSession: sanitizeGameSession(game),
-          playerName: player.name + ' (disconnected)',
-        });
-        console.log(
-          `${player.name} disconnected from game ${gameId} (${game.players.length} remaining)`
-        );
-        break;
-      }
+    // Player disconnected
+    const playerIndex = game.players.findIndex((p) => p.id === socket.id);
+    if (playerIndex !== -1) {
+      const player = game.players[playerIndex];
+      console.log(`${player.name} disconnected from game ${gameId}, grace period ${graceMs}ms`);
+
+      // Start grace period - remove player only if they don't rejoin
+      player.disconnectTimer = setTimeout(() => {
+        player.disconnectTimer = null;
+        const idx = game.players.findIndex((p) => p.id === socket.id);
+        if (idx !== -1) {
+          game.players.splice(idx, 1);
+          gameStore.unregisterSocket(socket.id);
+          gameStore.persist(gameId);
+
+          io.to(gameId).emit('playerLeft', {
+            gameSession: sanitizeGameSession(game),
+            playerName: player.name + ' (disconnected)',
+          });
+          console.log(
+            `${player.name} removed from game ${gameId} after grace period (${game.players.length} remaining)`
+          );
+        }
+      }, graceMs);
     }
   });
 }

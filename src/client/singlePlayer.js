@@ -214,7 +214,7 @@ export function nextSinglePlayerSong() {
 export function skipSinglePlayerSong() {
   // Record as skipped
   const currentSong = state.singlePlayerSongs[state.singlePlayerCurrentSong];
-  state.singlePlayerAnswers.push({
+  state.addSinglePlayerAnswer({
     songIndex: state.singlePlayerCurrentSong,
     guess: '',
     selectedAnswer: '',
@@ -341,10 +341,11 @@ function showSinglePlayerResults() {
   const accuracy = totalSongs > 0 ? Math.round((correctCount / totalSongs) * 100) : 0;
 
   // Determine grade
-  let grade = '🎵';
-  if (accuracy >= 90) grade = '🌟';
-  else if (accuracy >= 70) grade = '🎸';
-  else if (accuracy >= 50) grade = '🎤';
+  let grade = 'D';
+  if (accuracy >= 90) grade = 'S';
+  else if (accuracy >= 70) grade = 'A';
+  else if (accuracy >= 50) grade = 'B';
+  else if (accuracy >= 30) grade = 'C';
 
   if (scoreEl) scoreEl.textContent = String(state.singlePlayerScore);
   if (correctEl) correctEl.textContent = String(correctCount);
@@ -377,7 +378,7 @@ function showSinglePlayerDetailedResults() {
         <div class="result-artist">${song?.metadata?.artist || 'Unknown'}</div>
       </div>
       <div class="result-status">
-        ${answer.isCorrect ? '✅' : '❌'}
+        ${answer.isCorrect ? '+' : '—'}
         <span class="result-points">${answer.points > 0 ? `+${answer.points}` : '0'}</span>
       </div>
     `;

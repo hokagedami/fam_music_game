@@ -141,8 +141,9 @@ function getWrongAnswers(correctSong, allSongs, count, songIndex) {
     }
   }
 
-  // If we don't have enough unique wrong answers, repeat from the pool
+  // If not enough unique wrong answers, cycle through the pool again
   // This handles cases where fewer than 4 songs are in the library
+  // Never uses the correct answer as a wrong option
   if (wrongAnswers.length < count && otherSongs.length > 0) {
     let repeatIndex = 0;
     while (wrongAnswers.length < count) {
@@ -152,15 +153,8 @@ function getWrongAnswers(correctSong, allSongs, count, songIndex) {
         wrongAnswers.push(title);
       }
       repeatIndex++;
-      // Safety: prevent infinite loop if all songs are 'unknown'
       if (repeatIndex >= otherSongs.length * count) break;
     }
-  }
-
-  // If still not enough (e.g., only 1 song total), use the correct song title as filler
-  // This is a fallback - user should have at least 2 songs for a meaningful game
-  while (wrongAnswers.length < count) {
-    wrongAnswers.push(correctTitleOriginal);
   }
 
   return wrongAnswers.slice(0, count);
@@ -280,7 +274,7 @@ function scoreSinglePlayerKahootAnswer(isCorrect) {
 
   // Record answer
   const correctOption = state.currentKahootOptions.find((o) => o.isCorrect);
-  state.singlePlayerAnswers.push({
+  state.addSinglePlayerAnswer({
     songIndex: state.singlePlayerCurrentSong,
     guess: correctOption?.text || '',
     selectedAnswer: state.currentKahootOptions[state.kahootCorrectIndex]?.text || '',
@@ -324,8 +318,6 @@ export function selectKahootOptionMultiplayer(element, optionIndex) {
   if (state.currentPlayer?.isHost) return;
 
   state.setMultiplayerKahootAnswered(true);
-  // Determine if correct by comparing with stored correct index
-  const isCorrect = optionIndex === state.multiplayerKahootCorrectIndex;
 
   // Calculate response time
   const responseTime = Date.now() - state.answerStartTime;
@@ -341,7 +333,7 @@ export function selectKahootOptionMultiplayer(element, optionIndex) {
   const allOptions = document.querySelectorAll('#nonhost-kahoot-options .kahoot-option');
   allOptions.forEach((opt) => opt.classList.add('disabled'));
 
-  // Send answer to server with response time
+  // Send answer to server — server determines correctness
   const socket = getSocket();
   if (socket && socket.connected) {
     socket.emit('submitAnswer', {
@@ -349,7 +341,6 @@ export function selectKahootOptionMultiplayer(element, optionIndex) {
       playerId: state.currentPlayer?.id,
       playerName: state.currentPlayer?.name,
       answerIndex: optionIndex,
-      isCorrect: isCorrect,
       responseTime: responseTime,
       responseTimeSeconds: responseTimeSeconds,
     });
@@ -367,12 +358,13 @@ export function selectKahootOptionMultiplayer(element, optionIndex) {
 
 /**
  * Show options to players (called after song plays)
+ * correctIndex is no longer sent from server to prevent cheating;
+ * answer correctness is determined server-side and returned via answerResult event.
  * @param {Array} options
- * @param {number} correctIndex
  */
-export function showOptionsToPlayers(options, correctIndex) {
+export function showOptionsToPlayers(options) {
   state.setMultiplayerKahootOptions(options);
-  state.setMultiplayerKahootCorrectIndex(correctIndex);
+  state.setMultiplayerKahootCorrectIndex(-1);
   state.setMultiplayerKahootAnswered(false);
   state.setAnswerStartTime(Date.now());
 
@@ -473,7 +465,6 @@ function handleTimeUp() {
       playerId: state.currentPlayer?.id,
       playerName: state.currentPlayer?.name,
       answerIndex: -1, // No answer
-      isCorrect: false,
       responseTime: state.answerTimeLimit * 1000,
       responseTimeSeconds: state.answerTimeLimit,
       timedOut: true,
@@ -501,9 +492,7 @@ export function resetPlayerViewForNextSong(songNumber) {
   state.setMultiplayerKahootAnswered(false);
   state.setAnswerStartTime(0);
 
-  // Hide leaderboard overlay if visible
-  const leaderboardOverlay = getElementById('intermediate-leaderboard');
-  if (leaderboardOverlay) leaderboardOverlay.classList.add('hidden');
+  // Leaderboard overlay is hidden by its own timeout — not force-hidden here
 
   // Show waiting state, hide options
   const waitingState = getElementById('player-waiting-state');

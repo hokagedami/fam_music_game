@@ -53,6 +53,7 @@ import {
   nextSong as socketNextSong,
   revealAnswer as socketRevealAnswer,
   startGame as socketStartGame,
+  waitForSocket,
 } from './socket.js';
 
 // =========================
@@ -140,9 +141,10 @@ export async function loadMultiplayerMusic(event) {
 // =========================
 
 /**
- * Create a new multiplayer game
+ * Create a new multiplayer game (or restart an existing one after play-again)
  */
-export function createGame() {
+export async function createGame() {
+  await waitForSocket();
   if (!isConnected()) {
     showNotification('Not connected to server. Please wait...', 'error');
     return;
@@ -156,7 +158,12 @@ export function createGame() {
     return;
   }
 
-  proceedWithGameCreation(hostName);
+  // If we already have a game (play-again flow), restart it with new songs
+  if (state.gameId && state.currentPlayer?.isHost) {
+    proceedWithGameRestart(hostName);
+  } else {
+    proceedWithGameCreation(hostName);
+  }
 }
 
 /**
@@ -210,6 +217,49 @@ async function proceedWithGameCreation(hostName) {
   hideLoading();
 }
 
+/**
+ * Restart an existing game with new songs (play-again flow)
+ * @param {string} hostName
+ */
+async function proceedWithGameRestart(hostName) {
+  showLoading('Preparing new round...');
+
+  const songsCountSelect = getElementById('songs-count');
+  const clipDurationSelect = getElementById('clip-duration');
+  const answerTimeSelect = getElementById('answer-time');
+
+  const songsCount = parseInt(songsCountSelect?.value || '10');
+  const clipDuration = parseInt(clipDurationSelect?.value || '20');
+  const answerTime = parseInt(answerTimeSelect?.value || '15');
+
+  // Shuffle and select songs
+  const shuffledSongs = shuffleArray([...state.musicFiles]);
+  const selectedSongs = shuffledSongs.slice(0, Math.min(songsCount, shuffledSongs.length));
+
+  const songsMetadata = selectedSongs.map((song) => ({
+    metadata: song.metadata,
+    localUrl: song.url,
+  }));
+
+  // Emit restartGame instead of createGame — reuses existing game ID and players
+  const sock = initializeSocket();
+  sock.emit('restartGame', {
+    gameId: state.gameId,
+    settings: {
+      songsCount: selectedSongs.length,
+      clipDuration,
+      answerTime,
+    },
+    songsMetadata,
+  });
+
+  state.setMusicQuizSongs(selectedSongs);
+  state.setClipDuration(clipDuration);
+  state.setAnswerTimeLimit(answerTime);
+
+  hideLoading();
+}
+
 // Note: uploadMusicFiles is no longer needed since we use local playback
 // Music files stay on host's device and are never uploaded to server
 
@@ -220,7 +270,7 @@ async function proceedWithGameCreation(hostName) {
 /**
  * Join an existing game
  */
-export function joinGame() {
+export async function joinGame() {
   const playerNameInput = getElementById('join-player-name');
   const gameIdInput = getElementById('game-id-input');
 
@@ -237,6 +287,7 @@ export function joinGame() {
     return;
   }
 
+  await waitForSocket();
   if (!isConnected()) {
     showNotification('Not connected to server', 'error');
     return;
@@ -529,21 +580,28 @@ export function showMultiplayerResults() {
 
   if (multiResultsDiv) multiResultsDiv.style.display = 'block';
   if (singleResultsDiv) singleResultsDiv.classList.add('hidden');
-  if (playAgainMultiBtn) playAgainMultiBtn.style.display = 'inline-block';
   if (playAgainSingleBtn) playAgainSingleBtn.classList.add('hidden');
 
   const sortedPlayers = [...state.gameSession.players]
     .filter((p) => !p.isHost)
     .sort((a, b) => b.score - a.score);
 
-  // Populate podium
+  // Hide other rankings and actions initially — podium first
+  const otherRankingsEl = getElementById('other-rankings');
+  if (otherRankingsEl) otherRankingsEl.classList.add('hidden');
+  if (playAgainMultiBtn) playAgainMultiBtn.style.display = 'none';
+
+  // Step 1: Show podium with staggered animation
   populatePodium(sortedPlayers);
-
-  // Show other rankings
-  showOtherRankings(sortedPlayers);
-
-  // Start confetti for winner
   startConfetti();
+
+  // Step 2: After podium has been shown, hide podium and show full standings
+  const podiumContainer = getElementById('podium-container');
+  setTimeout(() => {
+    if (podiumContainer) podiumContainer.classList.add('hidden');
+    showOtherRankings(sortedPlayers);
+    if (playAgainMultiBtn) playAgainMultiBtn.style.display = 'inline-block';
+  }, 4000);
 }
 
 /**
@@ -579,31 +637,32 @@ function populatePodium(sortedPlayers) {
 }
 
 /**
- * Show rankings for players not in top 3
+ * Show final standings for all players
  * @param {Array} sortedPlayers
  */
 function showOtherRankings(sortedPlayers) {
   const otherRankingsEl = getElementById('other-rankings');
   if (!otherRankingsEl) return;
 
-  if (sortedPlayers.length <= 3) {
+  if (sortedPlayers.length === 0) {
     otherRankingsEl.classList.add('hidden');
     return;
   }
 
   otherRankingsEl.classList.remove('hidden');
-  otherRankingsEl.innerHTML = sortedPlayers
-    .slice(3)
-    .map(
-      (player, index) => `
-      <div class="ranking-entry">
-        <span class="rank">${getOrdinalSuffix(index + 4)}</span>
+  otherRankingsEl.innerHTML =
+    '<h3 class="final-standings-title">Final Standings</h3>' +
+    sortedPlayers
+      .map(
+        (player, index) => `
+      <div class="ranking-entry final-ranking" style="animation-delay: ${index * 0.1}s">
+        <span class="rank">${getOrdinalSuffix(index + 1)}</span>
         <span class="name">${player.name}</span>
         <span class="score">${player.score} pts</span>
       </div>
     `
-    )
-    .join('');
+      )
+      .join('');
 }
 
 // =========================
@@ -638,12 +697,23 @@ export function playAgain() {
     return;
   }
 
-  // Reset game state but keep lobby
+  const gameId = state.gameId;
+
+  // Reset local game-round state but keep identity (gameId, currentPlayer, gameSession)
   state.setCurrentSongIndex(0);
   state.setOptionsSentForCurrentSong(false);
-  state.resetMultiplayerState();
+  state.setMusicQuizSongs([]);
+  state.setMusicQuizSongsUrl([]);
+  state.setMusicAnswers([]);
+
+  // Tell server to reset the game back to lobby
+  if (isConnected() && gameId) {
+    const sock = initializeSocket();
+    sock.emit('resetGame', { gameId });
+  }
 
   showPanel('multiplayer-setup');
+  setupMultiplayerUI();
 }
 
 /**

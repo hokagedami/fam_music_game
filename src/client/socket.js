@@ -5,7 +5,6 @@
 import { io } from 'socket.io-client';
 
 import * as state from './state.js';
-import { isElectron, getServerUrl } from './electronBridge.js';
 import {
   showNotification,
   updateConnectionStatus,
@@ -20,10 +19,15 @@ import {
 } from './ui.js';
 import { showOptionsToPlayers, resetPlayerViewForNextSong } from './kahoot.js';
 import { formatSongAnswer, storage } from './utils.js';
-import { revealAnswerAndNext } from './multiplayer.js';
+import {
+  revealAnswerAndNext,
+  setupMultiplayerGameInterface,
+  showMultiplayerResults,
+} from './multiplayer.js';
 import { showIntermediateLeaderboard } from './ui.js';
 
 let socket = null;
+let socketReadyPromise = null;
 
 // =========================
 // SOCKET INITIALIZATION
@@ -39,7 +43,6 @@ export function getSocket() {
 
 /**
  * Initialize socket connection
- * Works both sync (web) and async (Electron)
  * @returns {Object} socket instance
  */
 export function initializeSocket() {
@@ -47,30 +50,7 @@ export function initializeSocket() {
     return socket;
   }
 
-  // In web mode, use synchronous initialization
-  // In Electron mode, the serverUrl will be fetched async but socket connects immediately
-  const serverUrl = isElectron ? null : window.location.origin;
-
-  if (isElectron) {
-    // For Electron, get server URL async and connect
-    getServerUrl().then((url) => {
-      if (!socket || !socket.connected) {
-        socket = io(url, {
-          transports: ['polling', 'websocket'],
-          reconnection: true,
-          reconnectionAttempts: 5,
-          reconnectionDelay: 1000,
-          timeout: 10000,
-        });
-        setupSocketEvents(socket);
-      }
-    });
-    // Return null initially, socket will be set up async
-    return null;
-  }
-
-  // Web mode - synchronous
-  socket = io(serverUrl, {
+  socket = io(window.location.origin, {
     transports: ['polling', 'websocket'],
     reconnection: true,
     reconnectionAttempts: 5,
@@ -79,6 +59,7 @@ export function initializeSocket() {
   });
 
   setupSocketEvents(socket);
+  socketReadyPromise = Promise.resolve(socket);
 
   return socket;
 }
@@ -99,6 +80,14 @@ export function disconnectSocket() {
  */
 export function isConnected() {
   return socket?.connected ?? false;
+}
+
+/**
+ * Wait for socket to be initialized
+ * @returns {Promise<Object>} socket instance
+ */
+export function waitForSocket() {
+  return socketReadyPromise || Promise.resolve(socket);
 }
 
 // =========================
@@ -162,7 +151,8 @@ function setupSocketEvents(sock) {
     };
     state.setCurrentPlayer(hostPlayer);
 
-    saveGameStateForReconnection();
+    saveGameStateForReconnection(data.reconnectToken);
+    updateGameUrl(data.gameId);
     showPanel('lobby');
     updateLobbyDisplay();
   });
@@ -172,7 +162,8 @@ function setupSocketEvents(sock) {
     state.setGameSession(data.gameSession);
     state.setCurrentPlayer(data.player);
 
-    saveGameStateForReconnection();
+    saveGameStateForReconnection(data.reconnectToken);
+    updateGameUrl(data.gameId);
     showPanel('lobby');
     updateLobbyDisplay();
     showNotification(`Joined game ${data.gameId}!`, 'success');
@@ -225,8 +216,8 @@ function setupSocketEvents(sock) {
   sock.on('kahootOptions', (data) => {
     if (state.currentPlayer?.isHost) return; // Host doesn't answer
 
-    if (data.options && typeof data.correctIndex === 'number') {
-      showOptionsToPlayers(data.options, data.correctIndex);
+    if (data.options) {
+      showOptionsToPlayers(data.options);
     }
   });
 
@@ -301,30 +292,63 @@ function setupSocketEvents(sock) {
     if (correctAnswerEl) {
       correctAnswerEl.textContent = data.correctAnswer;
     }
-    // Note: Correct answer overlay only shown on host screen
+
+    // Highlight the correct option for players (safe: answer period is over)
+    if (typeof data.correctIndex === 'number' && data.correctIndex >= 0) {
+      const correctOption = document.querySelector(
+        `#nonhost-kahoot-options .kahoot-option[data-option="${data.correctIndex}"]`
+      );
+      if (correctOption) {
+        correctOption.classList.add('correct');
+      }
+    }
+
   });
 
   sock.on('gameEnded', (data) => {
     state.setGameSession(data.gameSession);
-    clearReconnectionState();
+    // Don't clear reconnection state here — host/players may click "play again"
+    // State is cleared when they explicitly leave or the game is deleted
 
-    // Show final leaderboard to players before results panel
-    if (!state.currentPlayer?.isHost) {
-      showIntermediateLeaderboard(true); // true = final scores
-      // Hide leaderboard and show results after delay
+    if (state.currentPlayer?.isHost) {
+      // Host sees final leaderboard first, then podium + results
+      showIntermediateLeaderboard(true);
       setTimeout(() => {
         hideIntermediateLeaderboard();
         showPanel('results');
-        startConfetti();
+        window.dispatchEvent(new CustomEvent('gameEnded', { detail: data }));
       }, 4000);
     } else {
-      // Host goes directly to results
+      // Players go straight to results
       showPanel('results');
-      startConfetti();
+      window.dispatchEvent(new CustomEvent('gameEnded', { detail: data }));
+    }
+  });
+
+  sock.on('gameReset', (data) => {
+    // Host reset the game for a new round
+    state.setCurrentSongIndex(0);
+    state.setOptionsSentForCurrentSong(false);
+    state.setMusicQuizSongs([]);
+    state.setMusicQuizSongsUrl([]);
+    state.setMusicAnswers([]);
+
+    if (data.gameSession) {
+      state.setGameSession(data.gameSession);
+    }
+    if (data.gameId) {
+      state.setGameId(data.gameId);
     }
 
-    // Dispatch event for results display
-    window.dispatchEvent(new CustomEvent('gameEnded', { detail: data }));
+    // Refresh reconnection state with current game info
+    saveGameStateForReconnection();
+
+    // Host already navigated to setup — players go to lobby to wait
+    if (!state.currentPlayer?.isHost) {
+      showPanel('lobby');
+      updateLobbyDisplay();
+      showNotification(data.message || 'Host is starting a new round!', 'info');
+    }
   });
 
   sock.on('gameDeleted', (data) => {
@@ -376,21 +400,39 @@ function setupSocketEvents(sock) {
     state.setGameSession(data.gameSession);
     state.setCurrentPlayer(data.player);
     state.setGameId(data.gameSession.id);
+    state.setCurrentMode('multiplayer');
 
     if (data.gameSession.state === 'playing') {
       state.setCurrentSongIndex(data.gameSession.currentSong);
-      state.setMusicQuizSongs(data.gameSession.songs);
-      state.setMusicQuizSongsUrl(data.gameSession.audioUrls);
+      if (!data.isHost) {
+        state.setMusicQuizSongs(data.gameSession.songs);
+      }
       showPanel('game');
       updateGameDisplay();
+      // Initialize host/player controls (missed on rejoin vs fresh gameStarted)
+      setupMultiplayerGameInterface();
+
+      if (data.isHost && state.musicFiles.length === 0) {
+        showNotification('Rejoined! Load music files to continue hosting.', 'info');
+      }
     } else if (data.gameSession.state === 'lobby') {
       showPanel('lobby');
       updateLobbyDisplay();
     } else if (data.gameSession.state === 'finished') {
       showPanel('results');
+      showMultiplayerResults();
     }
 
-    showNotification('Rejoined game!', 'success');
+    saveGameStateForReconnection(data.reconnectToken);
+    updateGameUrl(data.gameSession.id);
+    if (data.gameSession.state !== 'playing' || !data.isHost || state.musicFiles.length > 0) {
+      showNotification('Rejoined game!', 'success');
+    }
+  });
+
+  sock.on('rejoinFailed', (data) => {
+    clearReconnectionState();
+    showNotification(data.message || 'Could not rejoin game', 'error');
   });
 }
 
@@ -398,7 +440,7 @@ function setupSocketEvents(sock) {
 // RECONNECTION
 // =========================
 
-function saveGameStateForReconnection() {
+function saveGameStateForReconnection(reconnectToken) {
   if (!state.gameId || !state.currentPlayer) return;
 
   const reconnectData = {
@@ -408,6 +450,17 @@ function saveGameStateForReconnection() {
     timestamp: Date.now(),
   };
 
+  // Save the reconnect token if provided (new or refreshed)
+  if (reconnectToken) {
+    reconnectData.reconnectToken = reconnectToken;
+  } else {
+    // Preserve existing token
+    const existing = storage.get('musicQuizReconnectState', null);
+    if (existing?.reconnectToken) {
+      reconnectData.reconnectToken = existing.reconnectToken;
+    }
+  }
+
   storage.set('musicQuizReconnectState', reconnectData);
 }
 
@@ -416,9 +469,9 @@ function loadReconnectionState() {
 
   if (!data) return null;
 
-  // Check if state is older than 1 hour
-  const oneHour = 60 * 60 * 1000;
-  if (Date.now() - data.timestamp > oneHour) {
+  // Check if state is older than 4 hours (match server game timeout)
+  const fourHours = 4 * 60 * 60 * 1000;
+  if (Date.now() - data.timestamp > fourHours) {
     clearReconnectionState();
     return null;
   }
@@ -428,6 +481,7 @@ function loadReconnectionState() {
 
 function clearReconnectionState() {
   storage.remove('musicQuizReconnectState');
+  clearGameUrl();
 }
 
 function attemptRejoinGame(reconnectData) {
@@ -437,7 +491,41 @@ function attemptRejoinGame(reconnectData) {
     gameId: reconnectData.gameId,
     playerId: reconnectData.playerId,
     playerName: reconnectData.playerName,
+    reconnectToken: reconnectData.reconnectToken,
   });
+}
+
+/**
+ * Update the browser URL to include the game ID (enables refresh/share)
+ * @param {string} gameId
+ */
+function updateGameUrl(gameId) {
+  if (!gameId) return;
+  try {
+    const url = new URL(window.location.href);
+    url.searchParams.set('game', gameId);
+    url.searchParams.delete('join'); // Remove old-style param
+    window.history.replaceState({}, '', url.toString());
+  } catch (_) {
+    // Ignore URL update failures (e.g., in tests)
+  }
+}
+
+/**
+ * Clear the game ID from the browser URL
+ */
+function clearGameUrl() {
+  try {
+    const url = new URL(window.location.href);
+    if (url.searchParams.has('game') || url.searchParams.has('join')) {
+      url.searchParams.delete('game');
+      url.searchParams.delete('join');
+      const clean = url.pathname + (url.search || '');
+      window.history.replaceState({}, '', clean || '/');
+    }
+  } catch (_) {
+    // Ignore
+  }
 }
 
 // =========================
@@ -556,6 +644,7 @@ export function nextSong() {
 
   socket.emit('nextSong', {
     gameId: state.gameId,
+    currentSongIndex: state.currentSongIndex,
   });
 }
 

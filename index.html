@@ -4,51 +4,21 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Fun Music Game</title>
-  <link rel="stylesheet" href="styles.css?v=7">
-  <!-- Socket.IO is bundled in the TypeScript client, no CDN needed -->
+  <link rel="stylesheet" href="styles.css?v=8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <!-- jsmediatags for audio metadata extraction -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
   <!-- QRCode.js for game ID QR codes -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
-<script>
-  // Detect Electron and add class to body
-  function checkElectron() {
-    if (window.electronAPI && window.electronAPI.isElectron) {
-      document.body.classList.add('is-electron');
-      return true;
-    }
-    return false;
-  }
-  // Check immediately
-  if (!checkElectron()) {
-    // If not detected, check again after a short delay (preload may not be ready)
-    setTimeout(checkElectron, 0);
-    setTimeout(checkElectron, 50);
-    setTimeout(checkElectron, 100);
-    // Also check when DOM is ready
-    document.addEventListener('DOMContentLoaded', checkElectron);
-  }
-</script>
 <div class="container">
-  <!-- Update Notification Banner (Desktop Only) -->
-  <div id="update-banner" class="update-banner desktop-only hidden">
-    <span id="update-message">Update available</span>
-    <button id="update-action-btn" class="btn btn-small">Update</button>
-    <button id="dismiss-update-btn" class="btn btn-small btn-secondary">Later</button>
-  </div>
-
   <div class="header">
     <div class="header-content">
       <h1 id="main-title">Fun Music Game</h1>
       <p id="main-subtitle">Test your music knowledge with friends!</p>
     </div>
-    <!-- Settings Button (Desktop Only) -->
-    <button id="settings-btn" class="btn btn-secondary settings-btn desktop-only hidden" onclick="openSettings()">
-      Settings
-    </button>
-    <span id="app-version" class="app-version desktop-only hidden"></span>
   </div>
 
   <!-- Game Status Bar -->
@@ -57,11 +27,11 @@
       <span id="game-id-display">Game ID: </span>
       <span id="player-role">Role: </span>
       <span id="player-count">Players: </span>
-      <span id="connection-status">🔴 Offline</span>
+      <span id="connection-status">Offline</span>
     </div>
     <div>
-      <button id="share-btn" class="btn btn-secondary" onclick="copyGameId()" style="display: none;">📋 Copy ID</button>
-      <button id="leave-btn" class="btn btn-danger" onclick="leaveGame()" style="display: none;">🚪 Leave Game</button>
+      <button id="share-btn" class="btn btn-secondary" onclick="copyGameId()" style="display: none;">Copy ID</button>
+      <button id="leave-btn" class="btn btn-danger" onclick="leaveGame()" style="display: none;">Leave</button>
     </div>
   </div>
 
@@ -72,23 +42,23 @@
     <!-- Return to Active Game -->
     <div id="return-to-game-section" class="return-to-game hidden">
       <div class="return-to-game-content">
-        <h3 id="return-game-title">🎮 You're in an active game!</h3>
+        <h3 id="return-game-title">You're in an active game!</h3>
         <p id="return-game-info">Game ID: <span id="return-game-id"></span></p>
         <div class="panel-actions">
-          <button class="btn" onclick="returnToGame()">🔙 Return to Game</button>
-          <button class="btn btn-danger" onclick="leaveGame()">🚪 Leave Game</button>
+          <button class="btn" onclick="returnToGame()">Return to Game</button>
+          <button class="btn btn-danger" onclick="leaveGame()">Leave Game</button>
         </div>
       </div>
     </div>
 
     <!-- Connection Status (only show if multiplayer is attempted) -->
     <div class="connection-status" id="connection-section" style="display: none;">
-      <p id="detailed-connection-status">🔴 Not connected to server</p>
-      <button id="test-connection-btn" class="btn btn-secondary" onclick="testConnection()">🔧 Test Connection</button>
+      <p id="detailed-connection-status">Not connected to server</p>
+      <button id="test-connection-btn" class="btn btn-secondary" onclick="testConnection()">Test Connection</button>
     </div>
 
     <div id="connection-help" class="connection-status" style="display: none;">
-      <h3>🚀 Server Setup Required</h3>
+      <h3>Server Setup Required</h3>
       <p>To enable multiplayer, start the server by running:</p>
       <code>node server.js</code>
       <p>Server should start on port 3001</p>
@@ -96,58 +66,32 @@
 
     <!-- Game Mode Selection -->
     <div class="game-modes-wrapper">
-      <!-- Decorative elements -->
-      <div class="decor decor-note decor-1">♪</div>
-      <div class="decor decor-note decor-2">♫</div>
-      <div class="decor decor-shape decor-3">△</div>
-      <div class="decor decor-shape decor-4">○</div>
-      <div class="decor decor-shape decor-5">▷</div>
-
       <div class="game-modes">
         <div class="option-card single-player">
+          <div class="card-icon-top"><svg class="card-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg></div>
           <h3>Single Player</h3>
-          <p>Practice your music knowledge offline. Perfect for solo sessions and testing your skills!</p>
+          <p>Practice your music knowledge solo. Test your skills at your own pace.</p>
           <button class="btn" onclick="startSinglePlayerMode()">Play Solo</button>
-          <div class="card-icon">
-            <span class="icon-circle icon-user">👤</span>
-            <span class="icon-circle icon-stats">📊</span>
-          </div>
         </div>
 
         <div class="option-card multiplayer create-game">
-          <div class="card-icon-top">🎧</div>
-          <h3>Create Multiplayer Game</h3>
-          <p>Host a new music quiz game. Load your music collection and invite friends to join!</p>
+          <div class="card-icon-top"><svg class="card-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+          <h3>Create Game</h3>
+          <p>Host a music quiz. Load your collection and invite friends to play.</p>
           <button class="btn" onclick="startMultiplayer()">Create Game</button>
-          <div class="card-icon">
-            <span class="icon-circle icon-group">👥</span>
-          </div>
         </div>
 
         <div class="option-card multiplayer join-game">
-          <h3>Join Multiplayer Game</h3>
-          <p>Join an existing game using a Game ID shared by the host.</p>
+          <div class="card-icon-top"><svg class="card-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg></div>
+          <h3>Join Game</h3>
+          <p>Enter a Game ID to join a friend's session.</p>
           <button class="btn" onclick="showJoinGame()">Join Game</button>
-          <div class="card-icon">
-            <span class="icon-circle icon-target">🎯</span>
-          </div>
-        </div>
-
-        <!-- Offline Multiplayer (Desktop Only) -->
-        <div class="option-card offline-multiplayer desktop-only hidden">
-          <div class="offline-badge">No Internet Needed</div>
-          <h3>Offline Multiplayer</h3>
-          <p>Create a WiFi hotspot and play with friends nearby. No internet or existing network required!</p>
-          <button class="btn" onclick="startOfflineMultiplayer()">Play Offline</button>
-          <div class="card-icon">
-            <span class="icon-circle icon-wifi">📡</span>
-          </div>
         </div>
       </div>
     </div>
 
     <div id="recent-games" style="display: none;">
-      <h3>🕒 Recent Games</h3>
+      <h3>Recent Games</h3>
       <div id="recent-games-list"></div>
     </div>
   </div>
@@ -170,20 +114,6 @@
     <div id="music-upload-section">
       <h3>Load Your Music Collection</h3>
 
-      <!-- Desktop Music Options (Electron Only) -->
-      <div id="desktop-music-options" class="desktop-music-options desktop-only hidden">
-        <div class="desktop-option">
-          <button class="btn" onclick="scanMusicLibrary()">
-            Load from Library
-          </button>
-          <p><small>Scan folders from your music library</small></p>
-        </div>
-        <button class="btn-link toggle-manual-upload" onclick="toggleManualUpload()">
-          Show manual file selection
-        </button>
-      </div>
-
-      <!-- Manual upload area - hidden by default on desktop -->
       <div id="manual-upload-area" class="upload-area">
         <input type="file" id="music-folder" webkitdirectory directory multiple style="display: none;" onchange="loadMusic(event, 'folder')">
         <button class="btn btn-secondary" onclick="document.getElementById('music-folder').click()">
@@ -200,17 +130,34 @@
           </button>
         </div>
       </div>
-      <div id="music-file-list" class="file-list"></div>
+      <div id="music-file-summary" class="file-summary hidden">
+        <span id="music-folder-path" class="folder-path"></span>
+        <button class="btn btn-small btn-secondary" onclick="toggleSongListModal()">View Songs</button>
+        <button class="btn btn-small btn-secondary" onclick="toggleMusicUpload()">Change</button>
+      </div>
+    </div>
+
+    <!-- Song List Modal -->
+    <div id="song-list-modal" class="modal hidden" onclick="toggleSongListModal()">
+      <div class="modal-content" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Song List</h3>
+          <button class="modal-close" onclick="toggleSongListModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div id="music-file-list" class="file-list"></div>
+        </div>
+      </div>
     </div>
 
     <!-- Game Settings - Redesigned -->
     <div id="music-settings-section">
-      <h3>⚙️ Game Settings</h3>
+      <h3>Game Settings</h3>
 
       <div class="settings-cards">
         <!-- Songs Count Card -->
         <div class="setting-card setting-songs">
-          <div class="setting-icon">🎵</div>
+          <div class="setting-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
           <div class="setting-content">
             <label class="setting-label">Number of Songs</label>
             <div class="setting-options" id="songs-options">
@@ -235,7 +182,7 @@
 
         <!-- Clip Duration Card -->
         <div class="setting-card setting-duration">
-          <div class="setting-icon">⏱️</div>
+          <div class="setting-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
           <div class="setting-content">
             <label class="setting-label">Clip Duration</label>
             <div class="setting-options" id="duration-options">
@@ -257,7 +204,7 @@
 
         <!-- Answer Time Card -->
         <div class="setting-card setting-answer" id="answer-time-group">
-          <div class="setting-icon">🤔</div>
+          <div class="setting-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
           <div class="setting-content">
             <label class="setting-label">Answer Time</label>
             <div class="setting-options" id="answer-options">
@@ -278,7 +225,7 @@
 
         <!-- Max Players Card -->
         <div class="setting-card setting-players" id="max-players-group">
-          <div class="setting-icon">👥</div>
+          <div class="setting-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
           <div class="setting-content">
             <label class="setting-label">Max Players</label>
             <div class="setting-options" id="players-options">
@@ -301,7 +248,7 @@
 
       <!-- Difficulty (hidden by default) -->
       <div class="setting-card setting-difficulty" id="difficulty-group" style="display: none;">
-        <div class="setting-icon">🎯</div>
+        <div class="setting-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
         <div class="setting-content">
           <label class="setting-label">Difficulty Level</label>
           <div class="setting-options" id="difficulty-options">
@@ -324,26 +271,26 @@
         <label class="toggle-option">
           <input type="checkbox" id="autoplay-next" checked>
           <span class="toggle-slider"></span>
-          <span class="toggle-label">🎵 Auto-advance songs</span>
+          <span class="toggle-label">Auto-advance songs</span>
         </label>
 
         <label class="toggle-option" id="single-player-options" style="display: none;">
           <input type="checkbox" id="show-hints" checked>
           <span class="toggle-slider"></span>
-          <span class="toggle-label">💡 Show hints</span>
+          <span class="toggle-label">Show hints</span>
         </label>
 
         <label class="toggle-option" id="single-player-options-2" style="display: none;">
           <input type="checkbox" id="shuffle-songs" checked>
           <span class="toggle-slider"></span>
-          <span class="toggle-label">🔀 Shuffle songs</span>
+          <span class="toggle-label">Shuffle songs</span>
         </label>
       </div>
 
       <!-- Start Button -->
       <div class="start-game-section">
         <button class="btn btn-start-game" id="start-game-button" onclick="startGame()">
-          🎮 Start Game
+          Start Game
         </button>
         <button class="btn btn-secondary btn-back" onclick="showPanel('home')">
           ← Back
@@ -391,52 +338,6 @@
           <div id="qr-code"></div>
           <p class="qr-url" id="qr-url-text"></p>
         </div>
-        <!-- LAN Connection Info (Desktop Only) -->
-        <div id="lan-connection-info" class="lan-connection-info desktop-only hidden">
-          <h4>LAN Connection</h4>
-          <p>Other players on the same network can join at:</p>
-          <div class="lan-url-display">
-            <code id="lan-url"></code>
-            <button class="btn btn-small btn-secondary" onclick="copyLanUrl()">Copy</button>
-          </div>
-          <p class="lan-hint">Make sure all players are connected to the same WiFi/network</p>
-        </div>
-        <!-- Hotspot Controls (Desktop Only) -->
-        <div id="hotspot-section" class="hotspot-section desktop-only hidden">
-          <h4>No WiFi Network?</h4>
-          <p>Create a hotspot for other players to connect directly to your computer:</p>
-          <div id="hotspot-controls">
-            <div id="hotspot-config" class="hotspot-config">
-              <div class="hotspot-input-group">
-                <label for="hotspot-ssid">Network Name:</label>
-                <input type="text" id="hotspot-ssid" value="FAM Music Quiz" maxlength="32">
-              </div>
-              <div class="hotspot-input-group">
-                <label for="hotspot-password">Password:</label>
-                <input type="text" id="hotspot-password" value="playmusic" minlength="8" maxlength="63">
-              </div>
-              <button id="hotspot-start-btn" class="btn btn-primary" onclick="startHotspot()">
-                Create Hotspot
-              </button>
-            </div>
-            <div id="hotspot-active" class="hotspot-active hidden">
-              <div class="hotspot-status">
-                <span class="hotspot-indicator"></span>
-                <strong>Hotspot Active</strong>
-              </div>
-              <div class="hotspot-credentials">
-                <p>Network: <code id="hotspot-active-ssid"></code></p>
-                <p>Password: <code id="hotspot-active-password"></code></p>
-              </div>
-              <p class="hotspot-instructions">Players should connect their device to this WiFi network, then open a browser and go to the LAN URL above.</p>
-              <button class="btn btn-danger btn-small" onclick="stopHotspot()">Stop Hotspot</button>
-            </div>
-            <div id="hotspot-manual" class="hotspot-manual hidden">
-              <p class="hotspot-manual-title">Manual Setup Required:</p>
-              <ul id="hotspot-instructions-list"></ul>
-            </div>
-          </div>
-        </div>
       </div>
 
       <div class="players-list">
@@ -455,7 +356,7 @@
     <!-- Player Controls -->
     <div id="player-controls" style="display: none;">
       <div style="text-align: center; margin-top: 30px; color: #666;">
-        <p>⏳ Waiting for host to start the game...</p>
+        <p>Waiting for host to start the game...</p>
       </div>
     </div>
 
@@ -486,11 +387,11 @@
 
     <!-- Single Player Controls -->
     <div id="single-player-controls" class="music-player hidden">
-      <h3 id="single-song-title">🎵 Listen and Guess!</h3>
+      <h3 id="single-song-title">Listen and Guess!</h3>
 
       <div id="song-hints" class="song-hints hidden">
-        <p>💡 <strong>Album:</strong> <span id="hint-album">-</span></p>
-        <p>💡 <strong>Year:</strong> <span id="hint-year">-</span></p>
+        <p><strong>Album:</strong> <span id="hint-album">-</span></p>
+        <p><strong>Year:</strong> <span id="hint-year">-</span></p>
       </div>
 
       <div class="audio-controls">
@@ -521,20 +422,20 @@
       <div id="single-guess-feedback" class="guess-feedback hidden"></div>
 
       <div class="game-controls">
-        <button class="btn btn-secondary" onclick="replaySingleClip()">🔄 Replay</button>
-        <button id="single-player-skip" class="btn btn-warning" onclick="skipSingleSong()">⏭️ Skip Song</button>
+        <button class="btn btn-secondary" onclick="replaySingleClip()">Replay</button>
+        <button id="single-player-skip" class="btn btn-warning" onclick="skipSingleSong()">Skip</button>
       </div>
 
       <div class="time-bonus" id="time-bonus" style="display: none;">
-        ⏱️ Time Bonus: <span id="bonus-points">+2</span> points available
+        Time Bonus: <span id="bonus-points">+2</span> points available
       </div>
 
       <div class="game-info">
         <div class="current-streak">
-          🔥 Current Streak: <span id="current-streak">0</span>
+          Current Streak: <span id="current-streak">0</span>
         </div>
         <div class="best-streak">
-          🏆 Best Streak: <span id="best-streak">0</span>
+          Best Streak: <span id="best-streak">0</span>
         </div>
       </div>
     </div>
@@ -542,7 +443,7 @@
     <!-- Host Music Player (Multiplayer) - Host controls music, doesn't answer -->
     <div id="host-music-player" style="display: none;">
       <div class="music-player">
-        <h3>🎵 Now Playing - <span id="host-song-number">Song 1</span> of <span id="host-total-songs">3</span></h3>
+        <h3>Now Playing &mdash; <span id="host-song-number">Song 1</span> of <span id="host-total-songs">3</span></h3>
         <p class="host-instruction">Play the song for players. You don't answer - just control the music!</p>
         <div class="audio-controls">
           <audio id="host-audio-player" controls controlsList="nodownload nofullscreen noremoteplayback" oncontextmenu="return false;"></audio>
@@ -550,18 +451,18 @@
         </div>
 
         <div id="host-waiting-status" class="host-status">
-          <p>⏳ Waiting for players to answer...</p>
+          <p>Waiting for players to answer...</p>
           <div id="players-answered-count">0 / 0 players answered</div>
         </div>
 
         <div class="game-controls" style="margin-top: 20px;">
-          <button class="btn btn-secondary" onclick="replayClip()">🔄 Replay</button>
-          <button id="show-options-btn" class="btn btn-warning" onclick="hostShowOptions()">🎯 Show Options to Players</button>
+          <button class="btn btn-secondary" onclick="replayClip()">Replay</button>
+          <button id="show-options-btn" class="btn btn-warning" onclick="hostShowOptions()">Show Options</button>
           <!-- Answer reveals automatically after timer expires, no manual button needed -->
         </div>
 
         <div id="host-correct-answer" class="correct-answer-display hidden">
-          <h4>✅ Correct Answer:</h4>
+          <h4>Correct Answer:</h4>
           <p id="correct-answer-text"></p>
         </div>
       </div>
@@ -570,11 +471,11 @@
     <!-- Non-Host Player (Multiplayer) - Waits for song, then sees options -->
     <div id="non-host-music-player" style="display: none;">
       <div class="music-player player-options-view">
-        <h3 id="player-song-status">🎵 Waiting for host to play song...</h3>
+        <h3 id="player-song-status">Waiting for host to play song...</h3>
 
         <!-- Waiting state - shown while host plays song -->
         <div id="player-waiting-state" class="player-waiting">
-          <div class="waiting-animation">🎧</div>
+          <div class="waiting-animation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="56" height="56"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg></div>
           <p class="player-instruction">Listen to the song playing...</p>
         </div>
 
@@ -600,11 +501,11 @@
 
         <!-- Timer for answering -->
         <div id="answer-timer" class="answer-timer hidden">
-          ⏱️ Time remaining: <span id="answer-time-left">10</span>s
+          Time remaining: <span id="answer-time-left">10</span>s
         </div>
 
         <div id="player-answer-status" class="player-answer-status hidden">
-          <p>✓ Answer submitted! Waiting for results...</p>
+          <p>Answer submitted! Waiting for results...</p>
         </div>
 
         <div id="player-result-display" class="player-result hidden">
@@ -617,13 +518,13 @@
 
     <!-- Live Updates (Multiplayer) -->
     <div class="live-updates" id="live-updates">
-      <h4>🔥 Live Updates</h4>
+      <h4>Live Updates</h4>
       <div id="live-feed"></div>
     </div>
 
     <!-- Scores Button (Multiplayer) -->
     <div id="scores-button-container" style="text-align: center; margin-top: 20px; display: none;">
-      <button class="btn btn-secondary" onclick="toggleScoreboard()">🏆 View Scores</button>
+      <button class="btn btn-secondary" onclick="toggleScoreboard()">View Scores</button>
     </div>
   </div>
 
@@ -639,7 +540,7 @@
             <span id="final-score">0</span>
             <small>points</small>
           </div>
-          <div class="score-grade" id="score-grade">🎵</div>
+          <div class="score-grade" id="score-grade"></div>
         </div>
 
         <div class="score-breakdown">
@@ -677,21 +578,21 @@
         <div id="podium-2nd" class="podium-position podium-2nd">
           <div class="podium-players"></div>
           <div class="podium-block">
-            <span class="podium-medal">🥈</span>
+            <span class="podium-medal">2</span>
             <span class="podium-rank">2nd</span>
           </div>
         </div>
         <div id="podium-1st" class="podium-position podium-1st">
           <div class="podium-players"></div>
           <div class="podium-block">
-            <span class="podium-medal">🥇</span>
+            <span class="podium-medal">1</span>
             <span class="podium-rank">1st</span>
           </div>
         </div>
         <div id="podium-3rd" class="podium-position podium-3rd">
           <div class="podium-players"></div>
           <div class="podium-block">
-            <span class="podium-medal">🥉</span>
+            <span class="podium-medal">3</span>
             <span class="podium-rank">3rd</span>
           </div>
         </div>
@@ -703,7 +604,7 @@
 
     <!-- Songs Played List -->
     <div id="songs-played-section" class="songs-played-section hidden">
-      <h3>🎵 Songs Played This Game</h3>
+      <h3>Songs Played</h3>
       <div id="songs-played-list" class="songs-played-list"></div>
     </div>
 
@@ -766,119 +667,7 @@
   </div>
 </div>
 
-<!-- Settings Modal (Desktop Only) -->
-<div id="settings-modal" class="modal hidden">
-  <div class="modal-content settings-modal-content">
-    <div class="modal-header">
-      <h3>Settings</h3>
-      <button class="modal-close" onclick="closeSettings()">×</button>
-    </div>
-    <div class="modal-body">
-      <!-- Game History Section -->
-      <div class="settings-section">
-        <h4>Game History</h4>
-        <div class="settings-row">
-          <label class="toggle-label">
-            <input type="checkbox" id="persist-history-toggle" onchange="togglePersistHistory()">
-            <span>Save game history</span>
-          </label>
-          <p class="settings-hint">When enabled, your game results will be saved locally</p>
-        </div>
-        <button class="btn btn-small btn-danger" onclick="clearHistory()">Clear History</button>
-      </div>
-
-      <!-- Music Library Section -->
-      <div class="settings-section">
-        <h4>Music Library Folders</h4>
-        <p class="settings-hint">Add folders to quickly load music from your library</p>
-        <div id="music-library-paths" class="library-paths-list">
-          <!-- Paths will be populated by JavaScript -->
-        </div>
-        <button class="btn btn-secondary btn-small" onclick="addMusicLibraryFolder()">Add Folder</button>
-      </div>
-
-      <!-- Online Server Section -->
-      <div class="settings-section">
-        <h4>Online Server</h4>
-        <div class="server-status-row" id="server-status-row">
-          <span class="status-dot" id="server-status-dot"></span>
-          <span id="server-status-text">Checking...</span>
-        </div>
-        <label class="toggle-switch-label">
-          <input type="checkbox" id="online-mode-toggle" onchange="toggleOnlineMode()">
-          <span class="toggle-switch-slider"></span>
-          <span>Use online server for multiplayer</span>
-        </label>
-        <p class="settings-hint" id="online-mode-hint">When enabled, connects to the online server for internet multiplayer.</p>
-        <div id="server-restart-notice" class="restart-notice" style="display:none">
-          <p>Restart required to apply changes</p>
-          <button class="btn btn-primary btn-small" onclick="restartApp()">Restart Now</button>
-        </div>
-      </div>
-
-      <!-- Updates Section -->
-      <div class="settings-section">
-        <h4>Updates</h4>
-        <button class="btn btn-secondary btn-small" onclick="checkUpdates()">Check for Updates</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Offline Multiplayer Setup Modal (Desktop Only) -->
-<div id="offline-setup-modal" class="modal hidden">
-  <div class="modal-content offline-setup-content">
-    <div class="modal-header">
-      <h2>LAN Multiplayer Setup</h2>
-      <button class="close-btn" onclick="closeOfflineSetupModal()">&times;</button>
-    </div>
-    <div class="offline-setup-body">
-      <div class="offline-info">
-        <div class="offline-icon">📡</div>
-        <p>Play with friends on the same network - no internet required!</p>
-      </div>
-
-      <div class="offline-options">
-        <div class="offline-option">
-          <h4>Option 1: Same WiFi Network</h4>
-          <p>If all players are on the same WiFi, just proceed and share the game link.</p>
-          <button class="btn btn-primary" onclick="skipHotspotSetup()">
-            Continue to Game Setup
-          </button>
-        </div>
-
-        <div class="offline-divider">
-          <span>OR</span>
-        </div>
-
-        <div class="offline-option">
-          <h4>Option 2: Create Hotspot (No WiFi needed)</h4>
-          <p>Create a WiFi network from this computer. Others connect to it directly.</p>
-          <div class="hotspot-form">
-            <div class="form-group">
-              <label for="offline-hotspot-ssid">Network Name:</label>
-              <input type="text" id="offline-hotspot-ssid" value="FAM Music Quiz" maxlength="32" class="settings-input">
-            </div>
-            <div class="form-group">
-              <label for="offline-hotspot-password">Password:</label>
-              <input type="text" id="offline-hotspot-password" value="playmusic" minlength="8" maxlength="63" class="settings-input">
-            </div>
-          </div>
-          <button id="offline-proceed-btn" class="btn" onclick="proceedWithOfflineMultiplayer()">
-            Try Auto-Create Hotspot
-          </button>
-          <p class="hint-text">If auto-create fails, enable Mobile Hotspot manually in Windows Settings.</p>
-        </div>
-      </div>
-
-      <div class="offline-actions">
-        <button class="btn btn-secondary" onclick="closeOfflineSetupModal()">Cancel</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- TypeScript client bundle -->
+<!-- Client bundle -->
 <script src="/dist/client/bundle.js"></script>
 </body>
 </html>

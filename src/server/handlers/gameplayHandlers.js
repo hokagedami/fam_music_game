@@ -52,8 +52,14 @@ export function registerGameplayHandlers(io, socket) {
         responseTime = validatedAnswer.responseTime;
       }
 
-      // Client sends isCorrect directly (client-side validation)
-      const isCorrect = data.isCorrect === true && !data.timedOut;
+      // Server-side answer validation using stored correct index
+      let isCorrect = false;
+      if (!data.timedOut) {
+        const songOptions = game.kahootOptions[songIndex];
+        if (songOptions && typeof songOptions.correctIndex === 'number') {
+          isCorrect = selectedOption === songOptions.correctIndex;
+        }
+      }
 
       // Calculate points based on response time
       const maxAnswerTime = game.settings.answerTime * 1000;
@@ -166,9 +172,10 @@ export function registerGameplayHandlers(io, socket) {
       }, answerTimeMs);
 
       // Broadcast options to all players (except host)
+      // NOTE: correctIndex is stored server-side only for validation;
+      // players receive it to highlight correct answer after reveal
       socket.to(data.gameId).emit('kahootOptions', {
         options: data.options,
-        correctIndex: data.correctIndex,
         songIndex: data.songIndex,
       });
 
@@ -187,6 +194,11 @@ export function registerGameplayHandlers(io, socket) {
       if (!game || game.state !== 'playing') return;
 
       if (game.hostId !== socket.id) return;
+
+      // Prevent duplicate reveals for the same song
+      if (!game.revealedSongs) game.revealedSongs = new Set();
+      if (game.revealedSongs.has(data.songIndex)) return;
+      game.revealedSongs.add(data.songIndex);
 
       // Clear answer timer
       if (game.answerTimer) {
@@ -219,6 +231,11 @@ export function registerGameplayHandlers(io, socket) {
 
       if (game.hostId !== socket.id) return;
 
+      // Idempotency: only advance if client's expected index matches server state
+      if (typeof data.currentSongIndex === 'number' && data.currentSongIndex !== game.currentSong) {
+        return; // Already advanced past this song (duplicate request)
+      }
+
       // Increment current song index
       const nextSongIndex = (game.currentSong || 0) + 1;
       game.currentSong = nextSongIndex;
@@ -226,6 +243,7 @@ export function registerGameplayHandlers(io, socket) {
       // Check if game is finished
       if (nextSongIndex >= game.songs.length) {
         game.state = 'finished';
+        gameStore.persist(data.gameId);
         io.to(data.gameId).emit('gameEnded', {
           gameSession: sanitizeGameSession(game),
         });
@@ -257,6 +275,7 @@ export function registerGameplayHandlers(io, socket) {
       if (game.hostId !== socket.id) return;
 
       game.state = 'finished';
+      gameStore.persist(data.gameId);
 
       io.to(data.gameId).emit('gameEnded', {
         gameSession: sanitizeGameSession(game),

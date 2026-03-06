@@ -180,6 +180,10 @@ export function setSinglePlayerAnswers(answers) {
   singlePlayerAnswers = answers;
 }
 
+export function addSinglePlayerAnswer(answer) {
+  singlePlayerAnswers.push(answer);
+}
+
 export function setSinglePlayerTimer(timer) {
   singlePlayerTimer = timer;
 }

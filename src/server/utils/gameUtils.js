@@ -32,9 +32,11 @@ export function sanitizeGameSession(game) {
     })),
     state: game.state,
     currentSong: game.currentSong,
-    songs: game.songs,
-    audioUrls: game.audioUrls,
-    kahootOptions: game.kahootOptions,
+    songs: (game.songs || []).map(s => ({
+      metadata: s.metadata,
+      originalName: s.originalName,
+      filename: s.filename,
+    })),
     createdAt: game.createdAt,
   };
 }

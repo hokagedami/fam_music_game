@@ -87,6 +87,11 @@ export function showPanel(panelName) {
 
   // Force hide scoreboard when changing panels
   forceHideScoreboard();
+
+  // Refresh return-to-game section when navigating to home
+  if (panelName === 'home') {
+    updateReturnToGameSection();
+  }
 }
 
 export function updateHeader() {
@@ -126,17 +131,17 @@ export function updateConnectionStatus() {
     if (container.id === 'connection-status' && !statusDot) {
       switch (state.connectionStatus) {
         case 'connected':
-          container.textContent = '🟢 Online';
+          container.textContent = 'Online';
           container.classList.remove('offline');
           container.classList.add('online');
           break;
         case 'connecting':
-          container.textContent = '🟡 Connecting...';
+          container.textContent = 'Connecting...';
           container.classList.remove('online', 'offline');
           break;
         case 'disconnected':
         case 'error':
-          container.textContent = '🔴 Offline';
+          container.textContent = 'Offline';
           container.classList.remove('online');
           container.classList.add('offline');
           break;
@@ -235,11 +240,13 @@ export function updateLobbyDisplay() {
     playersContainer.innerHTML = '';
     state.gameSession.players.forEach((player) => {
       const playerEl = document.createElement('div');
-      playerEl.className = 'lobby-player';
+      playerEl.className = `player-item${player.isHost ? ' host' : ''}`;
       playerEl.innerHTML = `
         <span class="player-name">${player.name}</span>
-        ${player.isHost ? '<span class="host-badge">Host</span>' : ''}
-        ${state.currentPlayer?.isHost && !player.isHost ? `<button class="kick-btn" onclick="kickPlayer('${player.id}')">Kick</button>` : ''}
+        <div class="player-actions">
+          ${player.isHost ? '<span class="player-status status-host">Host</span>' : '<span class="player-status status-ready">Joined</span>'}
+          ${state.currentPlayer?.isHost && !player.isHost ? `<button class="btn-kick" onclick="kickPlayer('${player.id}')" title="Kick player">✕</button>` : ''}
+        </div>
       `;
       playersContainer.appendChild(playerEl);
     });
@@ -335,9 +342,9 @@ export function updateReturnToGameSection() {
   if (savedState) {
     try {
       const reconnectData = JSON.parse(savedState);
-      if (reconnectData.gameId && reconnectData.playerId) {
+      if (reconnectData.gameId && reconnectData.playerName) {
         section.classList.remove('hidden');
-        const gameIdSpan = getElementById('saved-game-id');
+        const gameIdSpan = getElementById('return-game-id');
         if (gameIdSpan) {
           gameIdSpan.textContent = reconnectData.gameId;
         }
@@ -446,14 +453,35 @@ export function forceHideScoreboard() {
 // =========================
 
 export function displayMusicFileList(source) {
-  // Use the main file list element (shared between single/multiplayer)
+  const files = state.musicFiles;
+
+  // Show folder path summary, hide upload area
+  const summaryEl = getElementById('music-file-summary');
+  const pathEl = getElementById('music-folder-path');
+  const uploadArea = getElementById('manual-upload-area');
+  if (summaryEl && pathEl) {
+    if (files.length > 0) {
+      const firstFile = files[0]?.file;
+      // webkitRelativePath gives "folder/subfolder/file.mp3" — show full directory path
+      const relativePath = firstFile?.webkitRelativePath;
+      const folderPath = relativePath
+        ? relativePath.substring(0, relativePath.lastIndexOf('/'))
+        : null;
+      pathEl.textContent = folderPath
+        ? `${folderPath} (${files.length} songs)`
+        : `${files.length} songs loaded`;
+      summaryEl.classList.remove('hidden');
+      if (uploadArea) uploadArea.classList.add('hidden');
+    } else {
+      summaryEl.classList.add('hidden');
+      if (uploadArea) uploadArea.classList.remove('hidden');
+    }
+  }
+
+  // Populate modal list
   const listEl = getElementById('music-file-list');
   if (!listEl) return;
 
-  // Make the list visible
-  listEl.classList.remove('hidden');
-
-  const files = state.musicFiles;
   listEl.innerHTML = '';
 
   if (files.length === 0) {
@@ -467,10 +495,21 @@ export function displayMusicFileList(source) {
     itemEl.innerHTML = `
       <span class="music-number">${index + 1}</span>
       <span class="music-title">${file.metadata?.title || 'Unknown'}</span>
-      <span class="music-artist">${file.metadata?.artist || 'Unknown'}</span>
     `;
     listEl.appendChild(itemEl);
   });
+}
+
+export function toggleSongListModal() {
+  const modal = getElementById('song-list-modal');
+  if (!modal) return;
+  modal.classList.toggle('hidden');
+}
+
+export function toggleMusicUpload() {
+  const uploadArea = getElementById('manual-upload-area');
+  if (!uploadArea) return;
+  uploadArea.classList.toggle('hidden');
 }
 
 // =========================
@@ -553,7 +592,7 @@ export function showPlayerResult(isCorrect, points, correctAnswer) {
   }
 
   if (resultIcon) {
-    resultIcon.textContent = isCorrect ? '✅' : '❌';
+    resultIcon.textContent = isCorrect ? '+' : '×';
   }
 
   if (resultText) {
@@ -594,6 +633,9 @@ export function hideCorrectAnswerReveal() {
 // INTERMEDIATE LEADERBOARD
 // =========================
 
+// Track previous leaderboard state for animations
+let previousRankings = {};
+
 export function showIntermediateLeaderboard(isFinal = false) {
   if (!state.gameSession) return;
 
@@ -606,29 +648,91 @@ export function showIntermediateLeaderboard(isFinal = false) {
     .filter((p) => !p.isHost)
     .sort((a, b) => b.score - a.score);
 
-  if (sortedPlayers.length === 0) {
-    listEl.innerHTML = '<div class="ranking-entry">No player scores yet</div>';
-  } else {
-    listEl.innerHTML = sortedPlayers
-      .map(
-        (player, index) => `
-        <div class="ranking-entry ${player.id === state.currentPlayer?.id ? 'current-player' : ''}">
-          <span class="rank">#${index + 1}</span>
-          <span class="name">${player.name}</span>
-          <span class="score">${player.score} pts</span>
-        </div>
-      `
-      )
-      .join('');
-  }
-
-  // Update footer text based on whether this is the final leaderboard
+  // Update footer text
   const footerHint = modal.querySelector('.next-song-hint');
   if (footerHint) {
     footerHint.textContent = isFinal ? 'Final Scores!' : 'Next song starting soon...';
   }
 
+  // Populate entries
+  listEl.innerHTML = '';
+
+  if (sortedPlayers.length === 0) {
+    listEl.innerHTML = '<div class="ranking-entry">No player scores yet</div>';
+  } else {
+    sortedPlayers.forEach((player, index) => {
+      const prevRank = previousRankings[player.id]?.rank;
+      const prevScore = previousRankings[player.id]?.score ?? 0;
+      const newRank = index + 1;
+      const scoreDiff = player.score - prevScore;
+
+      // Position change indicator
+      let posChangeHtml = '';
+      if (prevRank !== undefined && prevRank !== newRank) {
+        const moved = prevRank - newRank; // positive = moved up
+        if (moved > 0) {
+          posChangeHtml = `<span class="rank-change rank-up">+${moved}</span>`;
+        } else {
+          posChangeHtml = `<span class="rank-change rank-down">${moved}</span>`;
+        }
+      }
+
+      // Score diff badge
+      const scoreDiffHtml = scoreDiff > 0
+        ? `<span class="score-diff">+${scoreDiff}</span>`
+        : '';
+
+      const entry = document.createElement('div');
+      entry.className = 'ranking-entry';
+      if (player.id === state.currentPlayer?.id) entry.classList.add('current-player');
+      if (prevRank !== undefined && prevRank > newRank) entry.classList.add('moved-up');
+      if (prevRank !== undefined && prevRank < newRank) entry.classList.add('moved-down');
+
+      entry.innerHTML = `
+        <span class="rank">#${newRank}${posChangeHtml}</span>
+        <span class="name">${player.name}</span>
+        <span class="score" data-from="${prevScore}" data-to="${player.score}">${player.score} pts${scoreDiffHtml}</span>
+      `;
+
+      listEl.appendChild(entry);
+    });
+
+    // Save current rankings for next comparison
+    const newRankings = {};
+    sortedPlayers.forEach((player, index) => {
+      newRankings[player.id] = { rank: index + 1, score: player.score };
+    });
+    previousRankings = newRankings;
+  }
+
+  // Show modal, then trigger slide-in animations in next frame
   modal.classList.remove('hidden');
+
+  requestAnimationFrame(() => {
+    // Add animate-in class to trigger CSS animations while modal is visible
+    listEl.querySelectorAll('.ranking-entry').forEach((entry) => {
+      entry.classList.add('animate-in');
+    });
+
+    // Animate score count-up
+    listEl.querySelectorAll('.score[data-from]').forEach((el) => {
+      const from = parseInt(el.dataset.from, 10);
+      const to = parseInt(el.dataset.to, 10);
+      if (from === to || isNaN(from) || isNaN(to)) return;
+
+      const duration = 800;
+      const start = performance.now();
+
+      function tick(now) {
+        const progress = Math.min((now - start) / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+        const current = Math.round(from + (to - from) * eased);
+        el.childNodes[0].textContent = `${current} pts`;
+        if (progress < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    });
+  });
 }
 
 export function hideIntermediateLeaderboard() {

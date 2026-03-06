@@ -6,9 +6,24 @@ import * as state from './state.js';
 import { getElementById } from './utils.js';
 import { showNotification } from './ui.js';
 
+// AbortController for cleaning up audio event listeners
+let audioAbortController = null;
+
 // =========================
 // AUDIO PLAYBACK
 // =========================
+
+/**
+ * Create a fresh AbortController for audio event listeners
+ * @returns {AbortSignal}
+ */
+function newAudioSignal() {
+  if (audioAbortController) {
+    audioAbortController.abort();
+  }
+  audioAbortController = new AbortController();
+  return audioAbortController.signal;
+}
 
 /**
  * Play audio from a URL with clip duration
@@ -28,8 +43,15 @@ export function playAudioClip(audioUrl, audioElementId, duration, onEnded) {
   // Stop any existing audio
   stopCurrentAudio();
 
+  const signal = newAudioSignal();
+
   audioElement.src = audioUrl;
   audioElement.currentTime = 0;
+
+  audioElement.addEventListener('error', () => {
+    console.error('Audio load error:', audioElement.error);
+    showNotification('Failed to load audio file', 'error');
+  }, { once: true, signal });
 
   // Set random start time for clip
   audioElement.addEventListener(
@@ -64,7 +86,7 @@ export function playAudioClip(audioUrl, audioElementId, duration, onEnded) {
 
       state.setAudioTimer(timer);
     },
-    { once: true }
+    { once: true, signal }
   );
 
   audioElement.load();
@@ -78,6 +100,12 @@ export function playAudioClip(audioUrl, audioElementId, duration, onEnded) {
  * Properly cleans up to prevent memory leaks
  */
 export function stopCurrentAudio() {
+  // Abort all pending audio event listeners to prevent leaks
+  if (audioAbortController) {
+    audioAbortController.abort();
+    audioAbortController = null;
+  }
+
   const audio = state.currentAudio;
   if (audio) {
     audio.pause();
@@ -164,7 +192,14 @@ export function playSinglePlayerSong(song, clipDuration, onEnded) {
   stopCurrentAudio();
   stopSinglePlayerTimeBonus();
 
+  const signal = newAudioSignal();
+
   audioElement.src = song.url;
+
+  audioElement.addEventListener('error', () => {
+    console.error('Audio load error:', audioElement.error);
+    showNotification('Failed to load audio file', 'error');
+  }, { once: true, signal });
 
   audioElement.addEventListener(
     'loadedmetadata',
@@ -191,7 +226,7 @@ export function playSinglePlayerSong(song, clipDuration, onEnded) {
       // Setup timer
       setupSinglePlayerAudioTimer(audioElement, clipDuration, startTime, onEnded);
     },
-    { once: true }
+    { once: true, signal }
   );
 
   audioElement.load();
@@ -322,7 +357,14 @@ export function playMultiplayerSong(audioUrl, clipDuration, onEnded) {
 
   stopCurrentAudio();
 
+  const signal = newAudioSignal();
+
   audioElement.src = audioUrl;
+
+  audioElement.addEventListener('error', () => {
+    console.error('Audio load error:', audioElement.error);
+    showNotification('Failed to load audio file', 'error');
+  }, { once: true, signal });
 
   audioElement.addEventListener(
     'loadedmetadata',
@@ -357,7 +399,7 @@ export function playMultiplayerSong(audioUrl, clipDuration, onEnded) {
 
       state.setAudioTimer(timer);
     },
-    { once: true }
+    { once: true, signal }
   );
 
   // Add ended event for when song naturally ends
@@ -365,7 +407,7 @@ export function playMultiplayerSong(audioUrl, clipDuration, onEnded) {
     if (onEnded) {
       onEnded();
     }
-  }, { once: true });
+  }, { once: true, signal });
 
   audioElement.load();
   state.setCurrentAudio(audioElement);

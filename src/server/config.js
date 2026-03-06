@@ -29,6 +29,7 @@ export const config = {
   // Session settings
   gameTimeoutHours: parseInt(process.env.GAME_TIMEOUT_HOURS || '4', 10),
   reconnectTimeoutMinutes: parseInt(process.env.RECONNECT_TIMEOUT_MINUTES || '30', 10),
+  disconnectGraceMs: parseInt(process.env.DISCONNECT_GRACE_MS || '30000', 10),
 
   // Upload settings
   maxFileSizeMb: parseInt(process.env.MAX_FILE_SIZE_MB || '50', 10),
@@ -38,6 +39,7 @@ export const config = {
   publicDir: projectRoot,
   distClientDir: path.join(projectRoot, 'dist/client'),
   uploadsDir: path.join(writableRoot, process.env.UPLOAD_DIR || 'uploads'),
+  dbPath: process.env.DB_PATH || path.join(writableRoot, 'fam_game.db'),
 };
 
 export const isDev = config.nodeEnv === 'development';
