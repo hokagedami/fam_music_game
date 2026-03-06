@@ -258,8 +258,15 @@ function returnToGame() {
     try {
       const reconnectData = JSON.parse(savedState);
       if (reconnectData.gameId) {
-        socket.initializeSocket();
-        // Socket will handle rejoin automatically
+        state.setCurrentMode('multiplayer');
+        const sock = socket.initializeSocket();
+
+        // If already connected, attempt rejoin directly
+        // (the 'connect' event won't fire again for an existing connection)
+        if (sock && sock.connected) {
+          socket.attemptRejoinFromSavedState();
+        }
+
         ui.showNotification('Reconnecting to game...', 'info');
       }
     } catch {

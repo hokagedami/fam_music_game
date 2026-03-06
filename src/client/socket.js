@@ -496,6 +496,16 @@ function attemptRejoinGame(reconnectData) {
 }
 
 /**
+ * Attempt rejoin using saved localStorage state (for when socket is already connected)
+ */
+export function attemptRejoinFromSavedState() {
+  const reconnectData = loadReconnectionState();
+  if (reconnectData) {
+    attemptRejoinGame(reconnectData);
+  }
+}
+
+/**
  * Update the browser URL to include the game ID (enables refresh/share)
  * @param {string} gameId
  */
