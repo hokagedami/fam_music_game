@@ -1,6 +1,7 @@
 import { gameStore } from '../gameStore.js';
 import { sanitizeGameSession, calculatePoints } from '../utils/index.js';
 import { validateGameId, validateAnswerSubmission } from '../validation.js';
+import { log } from '../logger.js';
 
 /**
  * Register gameplay-related socket handlers (answering, progression, etc.)
@@ -32,6 +33,17 @@ export function registerGameplayHandlers(io, socket) {
       // Use current song index from game state
       const songIndex = game.currentSong;
 
+      // If client sent a songIndex, ensure it matches the server's current song.
+      // Mismatched submissions (network lag after host advanced) are rejected so
+      // late answers can't be credited to the next song.
+      if (typeof data.songIndex === 'number' && data.songIndex !== songIndex) {
+        socket.emit('answerRejected', {
+          reason: 'song_advanced',
+          songIndex: data.songIndex,
+        });
+        return;
+      }
+
       // Check if already answered this song
       if (player.answers.some((a) => a.songIndex === songIndex)) {
         return;
@@ -55,10 +67,20 @@ export function registerGameplayHandlers(io, socket) {
       // Server-side answer validation using stored correct index
       let isCorrect = false;
       if (!data.timedOut) {
-        const songOptions = game.kahootOptions[songIndex];
-        if (songOptions && typeof songOptions.correctIndex === 'number') {
-          isCorrect = selectedOption === songOptions.correctIndex;
+        const songOptions = game.kahootOptions?.[songIndex];
+        if (!songOptions || typeof songOptions.correctIndex !== 'number') {
+          // Options not yet broadcast for this song — treat as host-side bug, do
+          // not score and surface it instead of silently penalising the player.
+          console.warn(
+            `Answer for game ${gameId} song ${songIndex} arrived before kahootOptions; skipping scoring`
+          );
+          socket.emit('answerRejected', {
+            reason: 'options_unavailable',
+            songIndex,
+          });
+          return;
         }
+        isCorrect = selectedOption === songOptions.correctIndex;
       }
 
       // Calculate points based on response time
@@ -110,7 +132,7 @@ export function registerGameplayHandlers(io, socket) {
         });
       }
 
-      console.log(
+      log(
         `${player.name} answered song ${songIndex + 1}: ${isCorrect ? 'correct' : 'wrong'} (${points} pts)`
       );
     } catch (error) {
@@ -179,7 +201,7 @@ export function registerGameplayHandlers(io, socket) {
         songIndex: data.songIndex,
       });
 
-      console.log(`Options shown for song ${data.songIndex + 1} in game ${data.gameId}`);
+      log(`Options shown for song ${data.songIndex + 1} in game ${data.gameId}`);
     } catch (error) {
       console.error('Error showing Kahoot options:', error);
     }
@@ -215,7 +237,7 @@ export function registerGameplayHandlers(io, socket) {
         gameSession: sanitizeGameSession(game),
       });
 
-      console.log(`Answer revealed for game ${data.gameId}: ${data.correctAnswer}`);
+      log(`Answer revealed for game ${data.gameId}: ${data.correctAnswer}`);
     } catch (error) {
       console.error('Error revealing answers:', error);
     }
@@ -247,7 +269,7 @@ export function registerGameplayHandlers(io, socket) {
         io.to(data.gameId).emit('gameEnded', {
           gameSession: sanitizeGameSession(game),
         });
-        console.log(`Game ${data.gameId} finished`);
+        log(`Game ${data.gameId} finished`);
         return;
       }
 
@@ -258,7 +280,7 @@ export function registerGameplayHandlers(io, socket) {
         clipDuration: game.settings.clipDuration,
       });
 
-      console.log(`Game ${data.gameId} moved to song ${nextSongIndex + 1}`);
+      log(`Game ${data.gameId} moved to song ${nextSongIndex + 1}`);
     } catch (error) {
       console.error('Error advancing song:', error);
     }
@@ -281,7 +303,7 @@ export function registerGameplayHandlers(io, socket) {
         gameSession: sanitizeGameSession(game),
       });
 
-      console.log(`Game ${data.gameId} ended by host`);
+      log(`Game ${data.gameId} ended by host`);
     } catch (error) {
       console.error('Error ending game:', error);
     }

@@ -1,5 +1,6 @@
 import { gameStore } from '../gameStore.js';
 import { sanitizeGameSession } from '../utils/index.js';
+import { log } from '../logger.js';
 
 /**
  * Register reconnection/rejoin socket handlers
@@ -10,7 +11,7 @@ export function registerRejoinHandlers(io, socket) {
   // Rejoin a game after disconnection
   socket.on('rejoinGame', (data) => {
     try {
-      console.log(`Rejoin attempt from ${socket.id}:`, data);
+      log(`Rejoin attempt from ${socket.id}:`, data);
 
       // Token-based rejoin (preferred) or fallback to name-based
       let gameId = data.gameId?.toUpperCase().trim();
@@ -24,9 +25,9 @@ export function registerRejoinHandlers(io, socket) {
           gameId = tokenData.gameId;
           playerName = tokenData.playerName;
           isHost = tokenData.isHost;
-          console.log(`Token resolved: game=${gameId}, player=${playerName}, isHost=${isHost}`);
+          log(`Token resolved: game=${gameId}, player=${playerName}, isHost=${isHost}`);
         } else {
-          console.log(`Invalid or expired reconnect token`);
+          log(`Invalid or expired reconnect token`);
           // Fall through to name-based rejoin if gameId and playerName provided
           if (!gameId || !playerName) {
             socket.emit('rejoinFailed', { message: 'Invalid reconnect token' });
@@ -51,7 +52,7 @@ export function registerRejoinHandlers(io, socket) {
       if (game.hostDisconnectTimer) {
         clearTimeout(game.hostDisconnectTimer);
         game.hostDisconnectTimer = null;
-        console.log(`Cancelled host disconnect timer for game ${gameId}`);
+        log(`Cancelled host disconnect timer for game ${gameId}`);
       }
 
       // Check if this is the host rejoining
@@ -92,7 +93,7 @@ export function registerRejoinHandlers(io, socket) {
         });
 
         gameStore.persist(gameId);
-        console.log(`Host ${playerName} rejoined game ${gameId}`);
+        log(`Host ${playerName} rejoined game ${gameId}`);
         return;
       }
 
@@ -135,7 +136,7 @@ export function registerRejoinHandlers(io, socket) {
         });
 
         gameStore.persist(gameId);
-        console.log(`${player.name} rejoined game ${gameId}`);
+        log(`${player.name} rejoined game ${gameId}`);
         return;
       }
 
@@ -179,7 +180,7 @@ export function registerRejoinHandlers(io, socket) {
         });
 
         gameStore.persist(gameId);
-        console.log(`${playerName} rejoined game ${gameId} (re-added after removal)`);
+        log(`${playerName} rejoined game ${gameId} (re-added after removal)`);
         return;
       }
 

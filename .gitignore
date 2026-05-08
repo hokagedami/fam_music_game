@@ -158,3 +158,10 @@ dist/
 
 # Misc
 nul
+
+# Local development artefacts
+.claude/
+fam_game.db
+fam_game.db-shm
+fam_game.db-wal
+node_modules/.fam-sqlite-abi.json

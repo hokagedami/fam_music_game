@@ -1,6 +1,7 @@
 import { gameStore } from '../gameStore.js';
 import { generateGameId, sanitizeGameSession } from '../utils/index.js';
 import { config } from '../config.js';
+import { log } from '../logger.js';
 import {
   validatePlayerName,
   validateGameSettings,
@@ -75,7 +76,7 @@ export function registerGameHandlers(io, socket) {
         reconnectToken,
       });
 
-      console.log(
+      log(
         `Game created: ${gameId} by ${data.hostName} (${gameSession.settings.songsCount} songs)`
       );
     } catch (error) {
@@ -159,7 +160,7 @@ export function registerGameHandlers(io, socket) {
         player: player,
       });
 
-      console.log(
+      log(
         `${playerName} joined game ${gameId} (${game.players.length}/${game.settings.maxPlayers} players)`
       );
     } catch (error) {
@@ -225,7 +226,7 @@ export function registerGameHandlers(io, socket) {
         playerName: kickedPlayer.name + ' (kicked)',
       });
 
-      console.log(`${kickedPlayer.name} was kicked from game ${data.gameId} by host`);
+      log(`${kickedPlayer.name} was kicked from game ${data.gameId} by host`);
     } catch (error) {
       console.error('Error kicking player:', error);
       socket.emit('error', { message: 'Failed to kick player: ' + error.message });
@@ -280,7 +281,7 @@ export function registerGameHandlers(io, socket) {
         gameSession: sanitizeGameSession(game),
       });
 
-      console.log(
+      log(
         `Game ${data.gameId} started with ${game.players.length} players and ${game.songs.length} songs`
       );
     } catch (error) {
@@ -292,23 +293,23 @@ export function registerGameHandlers(io, socket) {
   // Reset game for play again
   socket.on('resetGame', (data) => {
     try {
-      console.log(`resetGame received from ${socket.id}:`, data);
+      log(`resetGame received from ${socket.id}:`, data);
 
       if (!data.gameId) {
-        console.log('resetGame failed: Game ID is required');
+        log('resetGame failed: Game ID is required');
         socket.emit('error', { message: 'Game ID is required' });
         return;
       }
 
       const game = gameStore.get(data.gameId);
       if (!game) {
-        console.log(`resetGame failed: Game ${data.gameId} not found`);
+        log(`resetGame failed: Game ${data.gameId} not found`);
         socket.emit('error', { message: 'Game not found' });
         return;
       }
 
       if (game.hostId !== socket.id) {
-        console.log(
+        log(
           `resetGame failed: Not authorized (hostId=${game.hostId}, requester=${socket.id})`
         );
         socket.emit('error', { message: 'Not authorized to reset game' });
@@ -338,7 +339,7 @@ export function registerGameHandlers(io, socket) {
         message: 'Host is preparing a new game...',
       });
 
-      console.log(`Game ${data.gameId} reset by host for new round`);
+      log(`Game ${data.gameId} reset by host for new round`);
     } catch (error) {
       console.error('Error resetting game:', error);
       socket.emit('error', { message: 'Failed to reset game: ' + error.message });
@@ -396,7 +397,7 @@ export function registerGameHandlers(io, socket) {
         gameSession: sanitizeGameSession(game),
       });
 
-      console.log(
+      log(
         `Game ${data.gameId} restarted with ${game.players.length} players and ${game.songs.length} songs`
       );
     } catch (error) {
@@ -419,7 +420,7 @@ export function registerGameHandlers(io, socket) {
         io.to(data.gameId).emit('gameDeleted', {
           message: 'Host has left the game',
         });
-        console.log(`Game ${data.gameId} deleted (host left)`);
+        log(`Game ${data.gameId} deleted (host left)`);
         return;
       }
 
@@ -439,7 +440,7 @@ export function registerGameHandlers(io, socket) {
           playerName: player.name,
         });
 
-        console.log(
+        log(
           `${player.name} left game ${data.gameId} (${game.players.length} remaining)`
         );
       }
@@ -451,7 +452,7 @@ export function registerGameHandlers(io, socket) {
   // Handle disconnection - O(1) lookup via socketGameMap
   // Uses a grace period to allow page reloads / brief network drops
   socket.on('disconnect', () => {
-    console.log(`Player disconnected: ${socket.id}`);
+    log(`Player disconnected: ${socket.id}`);
 
     const gameId = gameStore.getGameIdForSocket(socket.id);
     if (!gameId) return;
@@ -466,7 +467,7 @@ export function registerGameHandlers(io, socket) {
 
     // Check if host disconnected
     if (game.hostId === socket.id) {
-      console.log(`Host disconnected from game ${gameId}, grace period ${graceMs}ms`);
+      log(`Host disconnected from game ${gameId}, grace period ${graceMs}ms`);
 
       // Notify players the host is temporarily disconnected
       io.to(gameId).emit('hostDisconnected', {
@@ -482,7 +483,7 @@ export function registerGameHandlers(io, socket) {
         io.to(gameId).emit('gameDeleted', {
           message: 'Host has disconnected',
         });
-        console.log(`Game ${gameId} deleted (host did not rejoin within grace period)`);
+        log(`Game ${gameId} deleted (host did not rejoin within grace period)`);
       }, graceMs);
 
       return;
@@ -492,7 +493,7 @@ export function registerGameHandlers(io, socket) {
     const playerIndex = game.players.findIndex((p) => p.id === socket.id);
     if (playerIndex !== -1) {
       const player = game.players[playerIndex];
-      console.log(`${player.name} disconnected from game ${gameId}, grace period ${graceMs}ms`);
+      log(`${player.name} disconnected from game ${gameId}, grace period ${graceMs}ms`);
 
       // Start grace period - remove player only if they don't rejoin
       player.disconnectTimer = setTimeout(() => {
@@ -507,7 +508,7 @@ export function registerGameHandlers(io, socket) {
             gameSession: sanitizeGameSession(game),
             playerName: player.name + ' (disconnected)',
           });
-          console.log(
+          log(
             `${player.name} removed from game ${gameId} after grace period (${game.players.length} remaining)`
           );
         }

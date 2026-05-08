@@ -130,7 +130,7 @@ export function validateKahootOptions(options) {
     if (!Array.isArray(optList) || optList.length !== 4) return null;
 
     const idx = parseInt(correctIndex, 10);
-    if (isNaN(idx) || idx < 0 || idx > 3) return null;
+    if (isNaN(idx) || idx < 0 || idx >= optList.length) return null;
 
     return {
       options: optList.map(o => sanitizeString(o, 200) || 'Unknown'),
