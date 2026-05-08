@@ -99,6 +99,14 @@ export function setConnectionStatus(status) {
 }
 
 export function setMusicFiles(files) {
+  // Revoke any object URLs from the previous batch to avoid memory leaks
+  if (Array.isArray(musicFiles) && musicFiles !== files) {
+    for (const f of musicFiles) {
+      if (f?.url && typeof URL !== 'undefined' && URL.revokeObjectURL) {
+        try { URL.revokeObjectURL(f.url); } catch (_) { /* ignore */ }
+      }
+    }
+  }
   musicFiles = files;
 }
 
@@ -314,6 +322,14 @@ export function resetMultiplayerState() {
 
 export function resetAllState() {
   currentMode = 'menu';
+  // Release any object URLs we still hold before discarding the list
+  if (Array.isArray(musicFiles)) {
+    for (const f of musicFiles) {
+      if (f?.url && typeof URL !== 'undefined' && URL.revokeObjectURL) {
+        try { URL.revokeObjectURL(f.url); } catch (_) { /* ignore */ }
+      }
+    }
+  }
   musicFiles = [];
 
   if (currentAudio) {

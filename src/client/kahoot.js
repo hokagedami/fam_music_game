@@ -340,6 +340,7 @@ export function selectKahootOptionMultiplayer(element, optionIndex) {
       gameId: state.gameId,
       playerId: state.currentPlayer?.id,
       playerName: state.currentPlayer?.name,
+      songIndex: state.currentSongIndex,
       answerIndex: optionIndex,
       responseTime: responseTime,
       responseTimeSeconds: responseTimeSeconds,
@@ -464,6 +465,7 @@ function handleTimeUp() {
       gameId: state.gameId,
       playerId: state.currentPlayer?.id,
       playerName: state.currentPlayer?.name,
+      songIndex: state.currentSongIndex,
       answerIndex: -1, // No answer
       responseTime: state.answerTimeLimit * 1000,
       responseTimeSeconds: state.answerTimeLimit,

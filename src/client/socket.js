@@ -602,6 +602,7 @@ export function submitAnswer(answerIndex, isCorrect, responseTime) {
     gameId: state.gameId,
     playerId: state.currentPlayer?.id,
     playerName: state.currentPlayer?.name,
+    songIndex: state.currentSongIndex,
     answerIndex,
     isCorrect,
     responseTime,

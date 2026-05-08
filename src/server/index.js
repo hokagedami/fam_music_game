@@ -14,6 +14,7 @@ import { config, isDev } from './config.js';
 import { gameStore } from './gameStore.js';
 import { registerAllHandlers } from './handlers/index.js';
 import { validatePlayerName, validateGameSettings, validateGameId } from './validation.js';
+import { log } from './logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -61,29 +62,32 @@ function getLocalIP() {
 const app = express();
 const server = createServer(app);
 
-// CORS configuration - allow localhost and local network in development
-const allowedOrigins = isDev
-  ? ['http://localhost:3000', 'http://127.0.0.1:3000']
-  : (process.env.ALLOWED_ORIGINS || '').split(',').filter(Boolean);
+// CORS configuration
+// In development: allow localhost + private LAN ranges so other devices can join.
+// In production: require an explicit allow-list via ALLOWED_ORIGINS — no permissive fallback.
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
 
-// For local network access in development, allow any origin from same network
+if (!isDev && allowedOrigins.length === 0) {
+  console.warn(
+    '[security] No ALLOWED_ORIGINS configured for production. All cross-origin requests will be rejected.'
+  );
+}
+
+const LAN_ORIGIN_RE = /^https?:\/\/(?:localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})(?::\d+)?$/;
+
 const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, curl, etc.)
+    // Allow requests with no origin (same-origin, curl, native app)
     if (!origin) return callback(null, true);
 
-    // In development, allow localhost and local network IPs
-    if (isDev) {
-      if (origin.includes('localhost') ||
-          origin.includes('127.0.0.1') ||
-          origin.match(/^http:\/\/192\.168\.\d+\.\d+/) ||
-          origin.match(/^http:\/\/172\.(1[6-9]|2[0-9]|3[0-1])\.\d+\.\d+/)) {
-        return callback(null, true);
-      }
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
     }
 
-    // Check against allowed origins
-    if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+    if (isDev && LAN_ORIGIN_RE.test(origin)) {
       return callback(null, true);
     }
 
@@ -101,7 +105,7 @@ const io = new Server(server, {
 // Rate limiting - prevent abuse
 const apiLimiter = rateLimit({
   windowMs: 1000, // 1 second window
-  max: 20, // 20 requests per second
+  max: 20, // 20 requests per second per IP — abuse-tier ceiling, not a normal-use cap
   message: { error: 'Too many requests, please slow down' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -109,8 +113,10 @@ const apiLimiter = rateLimit({
 
 const uploadLimiter = rateLimit({
   windowMs: 60000, // 1 minute window
-  max: 10, // 10 uploads per minute
+  max: 10, // 10 upload requests per minute per IP
   message: { error: 'Too many uploads, please wait a moment' },
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
 // Middleware
@@ -147,13 +153,32 @@ if (!fs.existsSync(config.uploadsDir)) {
 }
 
 // Configure multer for file uploads
+const ALLOWED_AUDIO_EXTS = new Set(['.mp3', '.wav', '.ogg', '.m4a']);
+const ALLOWED_AUDIO_MIMES = new Set([
+  'audio/mpeg',
+  'audio/mp3',
+  'audio/wav',
+  'audio/x-wav',
+  'audio/ogg',
+  'audio/mp4',
+  'audio/m4a',
+  'audio/x-m4a',
+]);
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, config.uploadsDir);
   },
   filename: (req, file, cb) => {
+    // Never trust originalname for the on-disk path: take only the extension and
+    // generate the rest. path.basename strips any path components a client tried to inject.
+    const safeOriginal = path.basename(file.originalname || '');
+    const ext = path.extname(safeOriginal).toLowerCase();
+    if (!ALLOWED_AUDIO_EXTS.has(ext)) {
+      return cb(new Error('Unsupported file extension'));
+    }
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
+    cb(null, uniqueSuffix + ext);
   },
 });
 
@@ -161,10 +186,12 @@ const upload = multer({
   storage: storage,
   limits: {
     fileSize: config.maxFileSizeMb * 1024 * 1024,
+    files: 100,
   },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/m4a'];
-    if (allowedTypes.includes(file.mimetype) || file.originalname.match(/\.(mp3|wav|ogg|m4a)$/i)) {
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    const mime = (file.mimetype || '').toLowerCase();
+    if (ALLOWED_AUDIO_MIMES.has(mime) || ALLOWED_AUDIO_EXTS.has(ext)) {
       cb(null, true);
     } else {
       cb(new Error('Only audio files are allowed'));
@@ -175,26 +202,29 @@ const upload = multer({
 // REST API Routes - apply rate limiting
 
 // Upload music files
-app.post('/api/upload', uploadLimiter, upload.array('music', 100), (req, res) => {
-  try {
+app.post('/api/upload', uploadLimiter, (req, res) => {
+  upload.array('music', 100)(req, res, (err) => {
+    if (err) {
+      const status = err instanceof multer.MulterError ? 400 : 400;
+      return res.status(status).json({ error: err.message || 'Upload failed' });
+    }
+
     const files = req.files;
     if (!files || files.length === 0) {
       return res.status(400).json({ error: 'No files uploaded' });
     }
 
     const uploadedFiles = files.map((file) => ({
-      originalName: file.originalname,
+      // Strip any path components from originalname before echoing back
+      originalName: path.basename(file.originalname || '').slice(0, 255),
       filename: file.filename,
       path: `/uploads/${file.filename}`,
       size: file.size,
     }));
 
-    console.log(`Uploaded ${files.length} files`);
+    log(`Uploaded ${files.length} files`);
     res.json({ success: true, files: uploadedFiles });
-  } catch (error) {
-    console.error('Upload error:', error);
-    res.status(500).json({ error: 'Failed to upload files' });
-  }
+  });
 });
 
 // Get game stats
@@ -244,24 +274,29 @@ io.on('connection', (socket) => {
 });
 
 // Graceful shutdown (only register when not in Electron, to avoid duplicate handlers)
-if (!process.env.ELECTRON_APP) {
-  process.on('SIGTERM', () => {
-    console.log('SIGTERM received. Shutting down gracefully...');
-    gameStore.stopCleanup();
-    server.close(() => {
-      console.log('Server closed');
-      process.exit(0);
-    });
+function shutdown(signal) {
+  console.log(`${signal} received. Shutting down gracefully...`);
+  gameStore.stopCleanup();
+  server.close(() => {
+    try {
+      gameStore.close();
+    } catch (err) {
+      console.error('Error closing game store:', err.message);
+    }
+    console.log('Server closed');
+    process.exit(0);
   });
 
-  process.on('SIGINT', () => {
-    console.log('SIGINT received. Shutting down gracefully...');
-    gameStore.stopCleanup();
-    server.close(() => {
-      console.log('Server closed');
-      process.exit(0);
-    });
-  });
+  // Force exit if shutdown hangs (e.g. lingering sockets)
+  setTimeout(() => {
+    console.error('Forced exit after shutdown timeout');
+    process.exit(1);
+  }, 10000).unref();
+}
+
+if (!process.env.ELECTRON_APP) {
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 }
 
 // Determine if this script is being run directly (not imported by Electron)
