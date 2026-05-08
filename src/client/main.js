@@ -418,6 +418,7 @@ defineGlobal('closeScoreboard', ui.closeScoreboard);
 defineGlobal('toggleQRCode', toggleQRCode);
 defineGlobal('toggleSongListModal', ui.toggleSongListModal);
 defineGlobal('toggleMusicUpload', ui.toggleMusicUpload);
+defineGlobal('updateLobbyDisplay', ui.updateLobbyDisplay);
 
 // Utils
 defineGlobal('loadMusic', loadMusic);

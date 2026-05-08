@@ -2,16 +2,25 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <!-- Electron (V8) needs JIT, but we don't need allow-unsigned-executable-memory
+         once hardened runtime is on; remove it if/when we drop older Electron. -->
     <key>com.apple.security.cs.allow-jit</key>
     <true/>
+
+    <!-- Required by V8 for the JS engine on hardened runtime. -->
     <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
     <true/>
-    <key>com.apple.security.cs.debugger</key>
-    <true/>
+
+    <!-- Outbound network for socket.io / auto-updates. -->
     <key>com.apple.security.network.client</key>
     <true/>
+
+    <!-- Inbound for the embedded server (loopback by default; LAN if user
+         opts in). -->
     <key>com.apple.security.network.server</key>
     <true/>
+
+    <!-- User-picked folders (music libraries) only — no broad disk access. -->
     <key>com.apple.security.files.user-selected.read-write</key>
     <true/>
 </dict>

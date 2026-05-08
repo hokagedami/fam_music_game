@@ -5,6 +5,7 @@
 import * as state from './state.js';
 import {
   copyToClipboard,
+  escapeHtml,
   extractFileMetadataAsync,
   formatSongAnswer,
   getElementById,
@@ -116,24 +117,46 @@ export async function loadMultiplayerMusic(event) {
 
   showLoading('Loading music files and reading metadata...');
 
-  const files = Array.from(input.files);
-  const audioFiles = files.filter((file) => file.type.startsWith('audio/'));
+  try {
+    const files = Array.from(input.files);
+    const audioFiles = files.filter((file) => file.type.startsWith('audio/'));
 
-  // Extract metadata from all files in parallel
-  const musicFiles = await Promise.all(
-    audioFiles.map((file) => extractFileMetadataAsync(file))
-  );
+    // Extract metadata from all files in parallel; an individual file failing
+    // shouldn't lose the rest of the batch.
+    const results = await Promise.allSettled(
+      audioFiles.map((file) => extractFileMetadataAsync(file))
+    );
 
-  state.setMusicFiles(musicFiles);
-  displayMusicFileList('multiplayer');
+    const musicFiles = [];
+    let failed = 0;
+    for (const r of results) {
+      if (r.status === 'fulfilled') {
+        musicFiles.push(r.value);
+      } else {
+        failed++;
+        console.error('Failed to load music file:', r.reason);
+      }
+    }
 
-  const startButton = getElementById('start-game-button');
-  if (startButton) {
-    startButton.disabled = musicFiles.length === 0;
+    state.setMusicFiles(musicFiles);
+    displayMusicFileList('multiplayer');
+
+    const startButton = getElementById('start-game-button');
+    if (startButton) {
+      startButton.disabled = musicFiles.length === 0;
+    }
+
+    if (failed > 0) {
+      showNotification(`Loaded ${musicFiles.length} songs (${failed} failed)`, 'warning');
+    } else {
+      showNotification(`Loaded ${musicFiles.length} songs`, 'success');
+    }
+  } catch (err) {
+    console.error('Error loading music files:', err);
+    showNotification('Failed to load music files', 'error');
+  } finally {
+    hideLoading();
   }
-
-  hideLoading();
-  showNotification(`Loaded ${musicFiles.length} songs`, 'success');
 }
 
 // =========================
@@ -624,7 +647,7 @@ function populatePodium(sortedPlayers) {
       const player = sortedPlayers[index];
       playersDiv.innerHTML = `
         <div class="podium-player-info">
-          <div class="podium-player-name">${player.name}</div>
+          <div class="podium-player-name">${escapeHtml(player.name)}</div>
           <div class="podium-player-score">${player.score} pts</div>
         </div>
       `;
@@ -657,7 +680,7 @@ function showOtherRankings(sortedPlayers) {
         (player, index) => `
       <div class="ranking-entry final-ranking" style="animation-delay: ${index * 0.1}s">
         <span class="rank">${getOrdinalSuffix(index + 1)}</span>
-        <span class="name">${player.name}</span>
+        <span class="name">${escapeHtml(player.name)}</span>
         <span class="score">${player.score} pts</span>
       </div>
     `

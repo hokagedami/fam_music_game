@@ -3,7 +3,7 @@
  */
 
 import * as state from './state.js';
-import { getElementById, querySelector, querySelectorAll } from './utils.js';
+import { getElementById, querySelector, querySelectorAll, escapeHtml } from './utils.js';
 
 // =========================
 // NOTIFICATIONS
@@ -202,7 +202,7 @@ export function updateLobbyDisplay() {
       const playerEl = document.createElement('div');
       playerEl.className = 'lobby-player';
       playerEl.innerHTML = `
-        <span class="player-name">${player.name}</span>
+        <span class="player-name">${escapeHtml(player.name)}</span>
         ${player.isHost ? '<span class="host-badge">Host</span>' : ''}
         ${player.isReady ? '<span class="ready-badge">Ready</span>' : ''}
       `;
@@ -242,12 +242,20 @@ export function updateLobbyDisplay() {
       const playerEl = document.createElement('div');
       playerEl.className = `player-item${player.isHost ? ' host' : ''}`;
       playerEl.innerHTML = `
-        <span class="player-name">${player.name}</span>
+        <span class="player-name">${escapeHtml(player.name)}</span>
         <div class="player-actions">
           ${player.isHost ? '<span class="player-status status-host">Host</span>' : '<span class="player-status status-ready">Joined</span>'}
-          ${state.currentPlayer?.isHost && !player.isHost ? `<button class="btn-kick" onclick="kickPlayer('${player.id}')" title="Kick player">✕</button>` : ''}
+          ${state.currentPlayer?.isHost && !player.isHost ? `<button class="btn-kick" data-player-id="${escapeHtml(player.id)}" title="Kick player">✕</button>` : ''}
         </div>
       `;
+      const kickBtn = playerEl.querySelector('.btn-kick');
+      if (kickBtn) {
+        kickBtn.addEventListener('click', () => {
+          if (typeof window.kickPlayer === 'function') {
+            window.kickPlayer(kickBtn.dataset.playerId);
+          }
+        });
+      }
       playersContainer.appendChild(playerEl);
     });
   }
@@ -418,7 +426,7 @@ export function updateLiveScoreboard() {
       (player, index) => `
       <div class="scoreboard-entry">
         <span class="rank">#${index + 1}</span>
-        <span class="name">${player.name}</span>
+        <span class="name">${escapeHtml(player.name)}</span>
         <span class="score">${player.score}</span>
       </div>
     `
@@ -494,7 +502,7 @@ export function displayMusicFileList(source) {
     itemEl.className = 'music-item';
     itemEl.innerHTML = `
       <span class="music-number">${index + 1}</span>
-      <span class="music-title">${file.metadata?.title || 'Unknown'}</span>
+      <span class="music-title">${escapeHtml(file.metadata?.title || 'Unknown')}</span>
     `;
     listEl.appendChild(itemEl);
   });
@@ -690,7 +698,7 @@ export function showIntermediateLeaderboard(isFinal = false) {
 
       entry.innerHTML = `
         <span class="rank">#${newRank}${posChangeHtml}</span>
-        <span class="name">${player.name}</span>
+        <span class="name">${escapeHtml(player.name)}</span>
         <span class="score" data-from="${prevScore}" data-to="${player.score}">${player.score} pts${scoreDiffHtml}</span>
       `;
 

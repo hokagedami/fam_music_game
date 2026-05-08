@@ -3,7 +3,7 @@
  */
 
 import * as state from './state.js';
-import { getElementById, shuffleArray, formatSongAnswer, extractSingleFileMetadata, syncSettingsButtons } from './utils.js';
+import { getElementById, shuffleArray, formatSongAnswer, extractSingleFileMetadata, syncSettingsButtons, escapeHtml } from './utils.js';
 import {
   showPanel,
   showNotification,
@@ -374,8 +374,8 @@ function showSinglePlayerDetailedResults() {
     resultEl.innerHTML = `
       <div class="result-number">${index + 1}</div>
       <div class="result-info">
-        <div class="result-title">${song?.metadata?.title || 'Unknown'}</div>
-        <div class="result-artist">${song?.metadata?.artist || 'Unknown'}</div>
+        <div class="result-title">${escapeHtml(song?.metadata?.title || 'Unknown')}</div>
+        <div class="result-artist">${escapeHtml(song?.metadata?.artist || 'Unknown')}</div>
       </div>
       <div class="result-status">
         ${answer.isCorrect ? '+' : '—'}

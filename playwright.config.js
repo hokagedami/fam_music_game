@@ -8,6 +8,9 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './tests',
   testMatch: '**/*.spec.js',
+  // Electron-app tests have their own config (playwright.electron.config.js)
+  // and must not run via the browser projects below.
+  testIgnore: '**/electron-*.spec.js',
 
   /* Run tests in files in parallel */
   fullyParallel: false, // Sequential for multiplayer tests

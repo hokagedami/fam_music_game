@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto';
 import path from 'path';
 import fs from 'fs';
 import { config } from './config.js';
+import { log } from './logger.js';
 
 /**
  * SQLite-backed game store with in-memory cache.
@@ -84,6 +85,7 @@ class GameStore {
         'DELETE FROM reconnect_tokens WHERE game_id = ? AND player_name = ? COLLATE NOCASE'
       ),
       cleanupOldGames: db.prepare('DELETE FROM games WHERE updated_at < ?'),
+      cleanupOldTokens: db.prepare('DELETE FROM reconnect_tokens WHERE created_at < ?'),
     };
 
     return db;
@@ -134,7 +136,7 @@ class GameStore {
     }
 
     if (loaded > 0) {
-      console.log(`Restored ${loaded} active game(s) from database`);
+      log(`Restored ${loaded} active game(s) from database`);
     }
   }
 
@@ -305,7 +307,8 @@ class GameStore {
   }
 
   /**
-   * Look up a reconnect token
+   * Look up a reconnect token. Tokens older than the configured TTL are
+   * rejected (and deleted) here in case the periodic cleanup hasn't run yet.
    * @param {string} token
    * @returns {{ gameId: string, playerName: string, isHost: boolean } | null}
    */
@@ -314,6 +317,13 @@ class GameStore {
     try {
       const row = this._stmts.getToken.get(token);
       if (!row) return null;
+
+      const ttlMs = config.gameTimeoutHours * 60 * 60 * 1000;
+      if (Date.now() - row.created_at > ttlMs) {
+        try { this._stmts.deleteToken.run(token); } catch (_) { /* ignore */ }
+        return null;
+      }
+
       return {
         gameId: row.game_id,
         playerName: row.player_name,
@@ -384,13 +394,14 @@ class GameStore {
         }
         this.games.delete(gameId);
         cleanedCount++;
-        console.log(`Cleaned up inactive game: ${gameId}`);
+        log(`Cleaned up inactive game: ${gameId}`);
       }
     }
 
-    // Also clean old games from DB
+    // Also clean old games and stale reconnect tokens from DB
     try {
       this._stmts.cleanupOldGames.run(now - maxAge);
+      this._stmts.cleanupOldTokens.run(now - maxAge);
     } catch (err) {
       console.error('DB cleanup error:', err.message);
     }
@@ -405,7 +416,7 @@ class GameStore {
     this.cleanupInterval = setInterval(() => {
       const cleaned = this.cleanup();
       if (cleaned > 0) {
-        console.log(`Cleanup complete: removed ${cleaned} inactive games`);
+        log(`Cleanup complete: removed ${cleaned} inactive games`);
       }
     }, 30 * 60 * 1000);
   }
