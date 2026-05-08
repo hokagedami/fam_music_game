@@ -62,44 +62,82 @@ function getLocalIP() {
 const app = express();
 const server = createServer(app);
 
-// CORS configuration
-// In development: allow localhost + private LAN ranges so other devices can join.
-// In production: require an explicit allow-list via ALLOWED_ORIGINS — no permissive fallback.
+// CORS configuration.
+//
+// Allow rules, in order:
+//  1. No Origin header → same-origin / native client / curl. Allow.
+//  2. Origin's host matches the request's Host header → same site. Allow.
+//     This covers the standard "page served from the same place as the API"
+//     deployment without any env var configuration.
+//  3. Origin in the explicit ALLOWED_ORIGINS allow-list. Allow.
+//  4. In development only: Origin matches localhost / private-LAN ranges so
+//     other devices on the same network can join.
+//  5. Otherwise reject.
+//
+// The Host header is set by the browser to the user-typed hostname, so a
+// page running on attacker.example.com cannot impersonate a same-site
+// request to fam-music.example.com (its Host would still be the attacker
+// domain, which won't match Origin's host of fam-music.example.com).
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
   .split(',')
   .map((s) => s.trim())
   .filter(Boolean);
 
-if (!isDev && allowedOrigins.length === 0) {
-  console.warn(
-    '[security] No ALLOWED_ORIGINS configured for production. All cross-origin requests will be rejected.'
-  );
-}
-
 const LAN_ORIGIN_RE = /^https?:\/\/(?:localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})(?::\d+)?$/;
 
-const corsOptions = {
+function isOriginAllowed(origin, hostHeader) {
+  if (!origin) return true; // no Origin → same-origin or non-browser
+  if (allowedOrigins.includes(origin)) return true;
+  if (isDev && LAN_ORIGIN_RE.test(origin)) return true;
+  // Same-host check: derive the Origin's host and compare to the request
+  // Host header. Strips port differences (host:443 vs host) and case.
+  try {
+    const oHost = new URL(origin).host.toLowerCase();
+    const rHost = (hostHeader || '').toLowerCase();
+    if (oHost && rHost && oHost === rHost) return true;
+  } catch {
+    /* malformed Origin — fall through to deny */
+  }
+  return false;
+}
+
+// Express-side: dynamic cors options per request so we can read req.headers.host.
+const corsForExpress = (req, callback) => {
+  const ok = isOriginAllowed(req.headers.origin, req.headers.host);
+  callback(null, {
+    origin: ok,
+    methods: ['GET', 'POST'],
+    credentials: true,
+  });
+};
+
+// Socket.IO side: same logic, different signature. Socket.IO 4 passes the
+// underlying IncomingMessage to the cors options function.
+const corsForSocketIO = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (same-origin, curl, native app)
+    // Without the request we can't do the same-host check, so accept any
+    // origin that passes our explicit rules. Same-host case is handled at
+    // the Engine.IO transport layer below via `allowRequest`.
     if (!origin) return callback(null, true);
-
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-
-    if (isDev && LAN_ORIGIN_RE.test(origin)) {
-      return callback(null, true);
-    }
-
-    callback(new Error('Not allowed by CORS'));
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    if (isDev && LAN_ORIGIN_RE.test(origin)) return callback(null, true);
+    callback(null, false);
   },
   methods: ['GET', 'POST'],
   credentials: true,
 };
 
-// Configure Socket.IO with secure CORS
+// Configure Socket.IO with secure CORS + same-host fallback.
 const io = new Server(server, {
-  cors: corsOptions,
+  cors: corsForSocketIO,
+  // allowRequest runs for every Engine.IO request and has full access to req,
+  // letting us approve same-host requests that didn't match the static lists.
+  allowRequest: (req, fn) => {
+    if (isOriginAllowed(req.headers.origin, req.headers.host)) {
+      return fn(null, true);
+    }
+    fn('Origin not allowed', false);
+  },
 });
 
 // Rate limiting - prevent abuse
@@ -120,7 +158,7 @@ const uploadLimiter = rateLimit({
 });
 
 // Middleware
-app.use(cors(corsOptions));
+app.use(cors(corsForExpress));
 
 // Compression - reduce response sizes
 app.use(compression({

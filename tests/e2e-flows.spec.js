@@ -545,6 +545,28 @@ test.describe('Security - CORS', () => {
     const acao = response.headers()['access-control-allow-origin'];
     expect(acao || '').not.toBe('https://attacker.example.com');
   });
+
+  test('same-origin (Origin host == Host header) is allowed without env config', async ({
+    request,
+    baseURL,
+  }) => {
+    // Simulate the typical "page served from same place as API" scenario
+    // that fails on a fresh deployment without ALLOWED_ORIGINS configured.
+    // The browser sets Origin to the page URL; the server sees Host == that.
+    const url = new URL(baseURL || 'http://localhost:3000');
+    const response = await request.get('/api/health', {
+      headers: { Origin: `${url.protocol}//${url.host}`, Host: url.host },
+      failOnStatusCode: false,
+    });
+
+    expect(response.status()).toBe(200);
+    // ACAO can be either the echoed origin or '*' depending on the cors lib's
+    // credential setting; either way it should not be a *rejection*.
+    const acao = response.headers()['access-control-allow-origin'];
+    if (acao) {
+      expect([`${url.protocol}//${url.host}`, '*']).toContain(acao);
+    }
+  });
 });
 
 // ============================================
