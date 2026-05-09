@@ -351,7 +351,7 @@ router.get('/download.view', streamRedirect);
 router.get('/getCoverArt.view', (req, res) => {
   const id = String(req.query.id || '');
 
-  // Per-song embedded cover (enrichment script extracts these from the MP3 APIC frame).
+  // Per-song embedded cover (extracted from the MP3 APIC frame at refresh time).
   // Song ids are MP3/M4A filenames; covers live at covers/<basename>.jpg.
   const songMatch = id.match(/^(.+)\.(mp3|m4a)$/i);
   if (songMatch) {
@@ -360,6 +360,10 @@ router.get('/getCoverArt.view', (req, res) => {
       res.setHeader('Cache-Control', 'public, max-age=86400');
       return res.sendFile(file);
     }
+    // Per-song id but no extracted cover on disk — make this loud so it doesn't
+    // silently fall back to the publication art (which would look like every
+    // song shares the same cover).
+    console.warn(`[subsonic] missing per-song cover for id=${id}; falling back to publication art`);
   }
 
   // Album-level / fallback: local override > JW publication cover.
@@ -390,26 +394,34 @@ router.get('/getRandomSongs.view', (req, res) => {
   res.json(envelope({ randomSongs: { song: shuffled } }));
 });
 
-// Custom admin endpoint (auth-protected via the same Subsonic creds): pulls a
-// fresh catalog from JW's pub-media API and re-extracts cover art. Updates the
-// in-memory cache for the lifetime of this container; survives until the next
-// DO redeploy, which restores the committed cache from disk.
-//
-//   GET /rest/refreshCatalog.view?u=…&t=…&s=…           # incremental
-//   GET /rest/refreshCatalog.view?force=true&u=…&t=…&s=… # full re-fetch
+// Shared refresh state — guards both the admin endpoint and the startup
+// self-heal so they can never run concurrently and step on each other's
+// cover-file writes.
 let refreshing = false;
-router.get('/refreshCatalog.view', async (req, res) => {
-  if (refreshing) return sendError(res, 0, 'Refresh already in progress');
+async function runRefresh(force) {
+  if (refreshing) throw new Error('Refresh already in progress');
   refreshing = true;
   try {
-    const force = req.query.force === 'true';
     const result = await refreshCatalog({
       cacheFile: CACHE_FILE,
       coversDir: COVERS_DIR,
       force,
     });
-    // Force the next request to re-read the cache file we just wrote.
-    cache.mtime = 0;
+    cache.mtime = 0; // force re-read on next request
+    return result;
+  } finally {
+    refreshing = false;
+  }
+}
+
+// Custom admin endpoint (auth-protected via the same Subsonic creds): pulls a
+// fresh catalog from JW's pub-media API and re-extracts cover art.
+//
+//   GET /rest/refreshCatalog.view?u=…&t=…&s=…           # incremental
+//   GET /rest/refreshCatalog.view?force=true&u=…&t=…&s=… # full re-fetch
+router.get('/refreshCatalog.view', async (req, res) => {
+  try {
+    const result = await runRefresh(req.query.force === 'true');
     res.json(envelope({
       catalogRefresh: {
         pubName: result.pubName,
@@ -422,12 +434,50 @@ router.get('/refreshCatalog.view', async (req, res) => {
       },
     }));
   } catch (err) {
+    if (err.message === 'Refresh already in progress') return sendError(res, 0, err.message);
     console.error('[refreshCatalog] failed:', err);
     sendError(res, 0, `Refresh failed: ${err.message}`);
-  } finally {
-    refreshing = false;
   }
 });
+
+// Startup self-heal: if covers/ is missing, empty, or under-populated relative
+// to the cached catalog, fetch from JW in the background. Runs once on module
+// load, fire-and-forget so the server starts accepting requests immediately;
+// during the ~2s populate, cover requests fall back to the publication art and
+// log a warning (see getCoverArt.view above).
+async function selfHealCovers() {
+  try {
+    fs.mkdirSync(COVERS_DIR, { recursive: true });
+
+    const cacheAvailable = fs.existsSync(CACHE_FILE);
+    if (!cacheAvailable) {
+      console.log('[subsonic] no songs-cache.json on disk — fetching catalog from JW…');
+      const r = await runRefresh(false);
+      console.log(`[subsonic] catalog ready: ${r.songCount} songs, ${r.counts.fetched} covers extracted`);
+      return;
+    }
+
+    refreshCache();
+    const expected = cache.songs.length;
+    if (expected === 0) return;
+
+    const present = fs
+      .readdirSync(COVERS_DIR)
+      .filter((f) => f.toLowerCase().endsWith('.jpg')).length;
+
+    if (present >= expected) return;
+
+    console.log(`[subsonic] covers/ has ${present}/${expected} files — repopulating from JW…`);
+    const r = await runRefresh(false);
+    console.log(`[subsonic] covers ready: ${r.counts.fetched} fetched, ${r.counts.kept} kept, ${r.counts.failed} failed`);
+  } catch (err) {
+    console.error('[subsonic] cover self-heal failed (server still serving):', err.message);
+  }
+}
+
+// Don't await — we want the server to start serving immediately. The refresh
+// completes in the background and the in-memory cache is reloaded when done.
+selfHealCovers();
 
 router.use((req, res) => sendError(res, 70, `Endpoint not implemented: ${req.path}`));
 
