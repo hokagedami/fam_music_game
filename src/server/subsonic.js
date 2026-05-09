@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
+import { refreshCatalog } from './catalog-refresher.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -387,6 +388,45 @@ router.get('/getRandomSongs.view', (req, res) => {
   const size = Math.min(parseInt(req.query.size || '10', 10), cache.songs.length);
   const shuffled = [...cache.songs].sort(() => Math.random() - 0.5).slice(0, size);
   res.json(envelope({ randomSongs: { song: shuffled } }));
+});
+
+// Custom admin endpoint (auth-protected via the same Subsonic creds): pulls a
+// fresh catalog from JW's pub-media API and re-extracts cover art. Updates the
+// in-memory cache for the lifetime of this container; survives until the next
+// DO redeploy, which restores the committed cache from disk.
+//
+//   GET /rest/refreshCatalog.view?u=…&t=…&s=…           # incremental
+//   GET /rest/refreshCatalog.view?force=true&u=…&t=…&s=… # full re-fetch
+let refreshing = false;
+router.get('/refreshCatalog.view', async (req, res) => {
+  if (refreshing) return sendError(res, 0, 'Refresh already in progress');
+  refreshing = true;
+  try {
+    const force = req.query.force === 'true';
+    const result = await refreshCatalog({
+      cacheFile: CACHE_FILE,
+      coversDir: COVERS_DIR,
+      force,
+    });
+    // Force the next request to re-read the cache file we just wrote.
+    cache.mtime = 0;
+    res.json(envelope({
+      catalogRefresh: {
+        pubName: result.pubName,
+        lastUpdated: result.lastUpdated,
+        songCount: result.songCount,
+        kept: result.counts.kept,
+        fetched: result.counts.fetched,
+        failed: result.counts.failed,
+        elapsedMs: result.elapsedMs,
+      },
+    }));
+  } catch (err) {
+    console.error('[refreshCatalog] failed:', err);
+    sendError(res, 0, `Refresh failed: ${err.message}`);
+  } finally {
+    refreshing = false;
+  }
 });
 
 router.use((req, res) => sendError(res, 70, `Endpoint not implemented: ${req.path}`));
