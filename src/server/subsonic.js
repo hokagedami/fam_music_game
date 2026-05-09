@@ -26,7 +26,7 @@ const COVER_URL_LG = 'https://cms-imgp.jw-cdn.org/img/p/sjjc/univ/pt/sjjc_univ_l
 const COVER_URL_MD = 'https://cms-imgp.jw-cdn.org/img/p/sjjc/univ/pt/sjjc_univ_md.jpg';
 const COVER_URL_XS = 'https://cms-imgp.jw-cdn.org/img/p/sjjc/univ/pt/sjjc_univ_xs.jpg';
 
-let cache = { songs: [], urlMap: new Map(), albumYear: null, mtime: 0 };
+let cache = { songs: [], urlMap: new Map(), albumYear: null, albumDuration: 0, mtime: 0 };
 
 function md5(s) {
   return crypto.createHash('md5').update(s, 'utf8').digest('hex');
@@ -113,11 +113,11 @@ function toSubsonicSong(raw, index) {
     year: null,
     genre: ALBUM_GENRE,
     coverArt: ALBUM_ID,
-    size: 0,
+    size: raw.size || 0,
     contentType,
     suffix,
-    duration: 0,
-    bitRate: 0,
+    duration: raw.duration || 0,
+    bitRate: raw.bitRate || 0,
     path: `${ALBUM_NAME}/${title}.${suffix}`,
     isVideo: false,
     playCount: 0,
@@ -138,15 +138,17 @@ function refreshCache() {
     const songs = raw.map((s, i) => toSubsonicSong(s, i));
     const urlMap = new Map(raw.map((s) => [s.filename, s.url]));
     const albumYear = (data.lastUpdated || '').slice(0, 4);
+    const albumDuration = songs.reduce((a, s) => a + (s.duration || 0), 0);
     cache = {
       songs,
       urlMap,
       albumYear: /^\d{4}$/.test(albumYear) ? parseInt(albumYear, 10) : null,
+      albumDuration,
       mtime: stat.mtimeMs,
     };
   } catch (err) {
     if (!cache.mtime) {
-      cache = { songs: [], urlMap: new Map(), albumYear: null, mtime: 0 };
+      cache = { songs: [], urlMap: new Map(), albumYear: null, albumDuration: 0, mtime: 0 };
     }
   }
 }
@@ -162,7 +164,7 @@ function albumSummary() {
     artistId: ARTIST_ID,
     coverArt: ALBUM_ID,
     songCount: cache.songs.length,
-    duration: 0,
+    duration: cache.albumDuration,
     playCount: 0,
     created: new Date().toISOString(),
     year: cache.albumYear || undefined,
