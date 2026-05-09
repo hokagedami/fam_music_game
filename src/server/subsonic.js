@@ -11,6 +11,7 @@ const router = express.Router();
 
 const CACHE_FILE = path.join(__dirname, 'songs-cache.json');
 const COVER_FILE = path.join(__dirname, 'album-cover.jpg');
+const COVERS_DIR = path.join(__dirname, 'covers');
 
 const API_VERSION = '1.16.1';
 const SERVER_TYPE = 'jw-music-server';
@@ -112,7 +113,7 @@ function toSubsonicSong(raw, index) {
     track,
     year: null,
     genre: ALBUM_GENRE,
-    coverArt: ALBUM_ID,
+    coverArt: id,
     size: raw.size || 0,
     contentType,
     suffix,
@@ -347,12 +348,24 @@ router.get('/stream.view', streamRedirect);
 router.get('/download.view', streamRedirect);
 
 router.get('/getCoverArt.view', (req, res) => {
-  // Local file override wins — drop a custom album-cover.jpg next to this module to use it.
+  const id = String(req.query.id || '');
+
+  // Per-song embedded cover (enrichment script extracts these from the MP3 APIC frame).
+  // Song ids are MP3/M4A filenames; covers live at covers/<basename>.jpg.
+  const songMatch = id.match(/^(.+)\.(mp3|m4a)$/i);
+  if (songMatch) {
+    const file = path.join(COVERS_DIR, `${songMatch[1]}.jpg`);
+    if (fs.existsSync(file)) {
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      return res.sendFile(file);
+    }
+  }
+
+  // Album-level / fallback: local override > JW publication cover.
   if (fs.existsSync(COVER_FILE)) {
     res.setHeader('Cache-Control', 'public, max-age=86400');
     return res.sendFile(COVER_FILE);
   }
-  // 302 → JW's CDN. Size hint from the client picks the smallest variant that fits.
   const size = parseInt(req.query.size || '0', 10);
   const url = size > 0 && size <= 200 ? COVER_URL_XS
             : size > 0 && size <= 500 ? COVER_URL_MD
