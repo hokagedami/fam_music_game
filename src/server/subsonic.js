@@ -22,6 +22,10 @@ const ALBUM_NAME = 'Sing Out Joyfully to Jehovah—Vocals';
 const ARTIST_NAME = "Jehovah's Witnesses";
 const ALBUM_GENRE = 'Worship';
 
+const COVER_URL_LG = 'https://cms-imgp.jw-cdn.org/img/p/sjjc/univ/pt/sjjc_univ_lg.jpg';
+const COVER_URL_MD = 'https://cms-imgp.jw-cdn.org/img/p/sjjc/univ/pt/sjjc_univ_md.jpg';
+const COVER_URL_XS = 'https://cms-imgp.jw-cdn.org/img/p/sjjc/univ/pt/sjjc_univ_xs.jpg';
+
 let cache = { songs: [], urlMap: new Map(), albumYear: null, mtime: 0 };
 
 function md5(s) {
@@ -341,17 +345,17 @@ router.get('/stream.view', streamRedirect);
 router.get('/download.view', streamRedirect);
 
 router.get('/getCoverArt.view', (req, res) => {
+  // Local file override wins — drop a custom album-cover.jpg next to this module to use it.
   if (fs.existsSync(COVER_FILE)) {
     res.setHeader('Cache-Control', 'public, max-age=86400');
     return res.sendFile(COVER_FILE);
   }
-  const png = Buffer.from(
-    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
-    'base64',
-  );
-  res.setHeader('Content-Type', 'image/png');
-  res.setHeader('Cache-Control', 'public, max-age=86400');
-  res.send(png);
+  // 302 → JW's CDN. Size hint from the client picks the smallest variant that fits.
+  const size = parseInt(req.query.size || '0', 10);
+  const url = size > 0 && size <= 200 ? COVER_URL_XS
+            : size > 0 && size <= 500 ? COVER_URL_MD
+            : COVER_URL_LG;
+  res.redirect(302, url);
 });
 
 router.get('/getGenres.view', (req, res) => {
