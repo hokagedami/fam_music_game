@@ -15,6 +15,7 @@ import { gameStore } from './gameStore.js';
 import { registerAllHandlers } from './handlers/index.js';
 import { validatePlayerName, validateGameSettings, validateGameId } from './validation.js';
 import { log } from './logger.js';
+import subsonicRouter from './subsonic.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -302,6 +303,10 @@ app.get('/api/games', apiLimiter, (req, res) => {
   }));
   res.json({ games });
 });
+
+// Subsonic-compatible API for the JW music player.
+// Streams are served as 302 redirects to jw-cdn.org so audio bytes do not proxy through this server.
+app.use('/rest', subsonicRouter);
 
 // Serve uploaded files
 app.use('/uploads', express.static(config.uploadsDir));
