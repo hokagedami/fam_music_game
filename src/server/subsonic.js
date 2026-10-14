@@ -440,44 +440,31 @@ router.get('/refreshCatalog.view', async (req, res) => {
   }
 });
 
-// Startup self-heal: if covers/ is missing, empty, or under-populated relative
-// to the cached catalog, fetch from JW in the background. Runs once on module
-// load, fire-and-forget so the server starts accepting requests immediately;
-// during the ~2s populate, cover requests fall back to the publication art and
-// log a warning (see getCoverArt.view above).
-async function selfHealCovers() {
+// Startup refresh: always run an incremental refresh on boot. The refresher
+// makes one pubMedia API call, compares each song's modifiedDatetime, and only
+// range-fetches songs whose data has actually changed — so this is ~200 ms when
+// nothing is new and seconds when JW published updates. Covers also fall out
+// of this for free: if any are missing they get re-extracted.
+//
+// Fire-and-forget so the server starts accepting requests immediately; during
+// the brief window before the refresh lands, we serve from whatever is on disk
+// (committed cache + covers, or empty if neither shipped).
+async function bootRefresh() {
   try {
     fs.mkdirSync(COVERS_DIR, { recursive: true });
-
-    const cacheAvailable = fs.existsSync(CACHE_FILE);
-    if (!cacheAvailable) {
-      console.log('[subsonic] no songs-cache.json on disk — fetching catalog from JW…');
-      const r = await runRefresh(false);
-      console.log(`[subsonic] catalog ready: ${r.songCount} songs, ${r.counts.fetched} covers extracted`);
-      return;
-    }
-
-    refreshCache();
-    const expected = cache.songs.length;
-    if (expected === 0) return;
-
-    const present = fs
-      .readdirSync(COVERS_DIR)
-      .filter((f) => f.toLowerCase().endsWith('.jpg')).length;
-
-    if (present >= expected) return;
-
-    console.log(`[subsonic] covers/ has ${present}/${expected} files — repopulating from JW…`);
+    console.log('[subsonic] checking JW for catalog updates…');
     const r = await runRefresh(false);
-    console.log(`[subsonic] covers ready: ${r.counts.fetched} fetched, ${r.counts.kept} kept, ${r.counts.failed} failed`);
+    const summary = `${r.counts.kept} kept, ${r.counts.fetched} fetched`
+      + (r.counts.failed ? `, ${r.counts.failed} failed` : '');
+    const noteworthy = r.counts.fetched > 0 || r.counts.failed > 0;
+    const verb = noteworthy ? 'catalog refreshed' : 'catalog up to date';
+    console.log(`[subsonic] ${verb} (${summary}) — ${r.songCount} songs, lastUpdated=${r.lastUpdated}`);
   } catch (err) {
-    console.error('[subsonic] cover self-heal failed (server still serving):', err.message);
+    console.error('[subsonic] boot refresh failed (serving stale on-disk cache):', err.message);
   }
 }
 
-// Don't await — we want the server to start serving immediately. The refresh
-// completes in the background and the in-memory cache is reloaded when done.
-selfHealCovers();
+bootRefresh();
 
 router.use((req, res) => sendError(res, 70, `Endpoint not implemented: ${req.path}`));
 

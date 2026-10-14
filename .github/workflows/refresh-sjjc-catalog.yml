@@ -1,0 +1,59 @@
+name: Refresh SJJC catalog
+
+# Pulls the latest SJJC Vocals catalog + per-song covers from JW's public
+# pub-media API and commits any diff back to main. DO's auto-deploy then picks
+# up the push. No commit is made if the catalog is unchanged, so quiet days
+# cost nothing.
+
+on:
+  schedule:
+    # Daily at 07:00 UTC. JW publishes rarely — once a day is plenty of
+    # freshness and keeps us well inside GitHub Actions' free tier.
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Re-fetch every song even if unchanged'
+        type: boolean
+        default: false
+
+permissions:
+  # Needed so the default GITHUB_TOKEN can push the auto-commit back to main.
+  contents: write
+
+concurrency:
+  group: refresh-sjjc
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Refresh catalog from pub-media
+        run: node scripts/refresh-catalog.mjs ${{ inputs.force && '--force' || '' }}
+
+      - name: Commit if changed
+        run: |
+          if git diff --quiet -- src/server/songs-cache.json src/server/covers; then
+            echo "No catalog changes — nothing to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/server/songs-cache.json src/server/covers
+          # Summarize what changed in the body for easy auditing.
+          CHANGED=$(git diff --cached --name-only | wc -l)
+          LAST_UPDATED=$(node -e "console.log(require('./src/server/songs-cache.json').lastUpdated)")
+          git commit -m "chore: refresh SJJC catalog ($CHANGED files, lastUpdated $LAST_UPDATED)"
+          git push
