@@ -1,6 +1,6 @@
 {
   "pubName": "“Sing Out Joyfully” to Jehovah—Vocals",
-  "lastUpdated": "2026-03-16",
+  "lastUpdated": "2026-08-18",
   "songs": [
     {
       "url": "https://cfp2.jw-cdn.org/a/0d62aa6/1/o/sjjc_E_001.mp3",
@@ -957,6 +957,15 @@
       "bitRate": 256
     },
     {
+      "url": "https://cfp2.jw-cdn.org/a/177aa2/2/o/sjjc_E_131.mp3",
+      "filename": "sjjc_E_131.mp3",
+      "title": "131. “What God Has Yoked Together”",
+      "size": 6841087,
+      "modifiedDatetime": "2026-08-06 18:56:08",
+      "duration": 213,
+      "bitRate": 256
+    },
+    {
       "url": "https://cfp2.jw-cdn.org/a/e1f0344/1/o/sjjc_E_133.mp3",
       "filename": "sjjc_E_133.mp3",
       "title": "133. Worship Jehovah During Youth",
@@ -1216,7 +1225,16 @@
       "modifiedDatetime": "2026-03-16 14:46:50",
       "duration": 233,
       "bitRate": 256
+    },
+    {
+      "url": "https://cfp2.jw-cdn.org/a/92fef70/2/o/sjjc_E_164.mp3",
+      "filename": "sjjc_E_164.mp3",
+      "title": "164. I Trust In You",
+      "size": 8049797,
+      "modifiedDatetime": "2026-08-18 15:37:57",
+      "duration": 251,
+      "bitRate": 256
     }
   ],
-  "refreshedAt": "2026-05-09T21:49:58.494Z"
+  "refreshedAt": "2026-10-14T13:37:58.649Z"
 }
